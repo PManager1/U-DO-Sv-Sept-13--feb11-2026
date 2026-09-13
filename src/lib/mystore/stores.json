@@ -1,0 +1,5 @@
+{
+  "stores": [
+    { "id": "store_1", "name": "", "address": "", "type": "", "logoUrl": "", "active": true }
+  ]
+}

@@ -1,0 +1,56 @@
+@import 'tailwindcss';
+@plugin '@tailwindcss/forms';
+@plugin '@tailwindcss/typography';
+
+@custom-variant landscape (@media (orientation: landscape) and (max-width: 1023px));
+
+@theme {
+	--font-sans: 'Nunito', ui-sans-serif, system-ui, sans-serif;
+	--font-display: 'Inter Tight', 'Nunito', ui-sans-serif, system-ui, sans-serif;
+	--z-60: 60;
+	--z-9999: 9999;
+	--color-cream: #faf7f5;
+	--color-coral: #ff4d4d;
+	--color-coral-dark: #e63939;
+	--color-peach: #ff8a65;
+	--color-ink: #1a1a1a;
+	--color-ink-soft: #6b6560;
+	--color-fresh: #2e7d32;
+	--color-line: #ede8e4;
+	--shadow-soft: 0 1px 2px rgb(26 26 26 / 0.04), 0 8px 24px rgb(26 26 26 / 0.06);
+	--shadow-lift: 0 2px 4px rgb(26 26 26 / 0.05), 0 16px 32px rgb(26 26 26 / 0.1);
+}
+
+@keyframes riseIn {
+	from {
+		opacity: 0;
+		transform: translateY(10px);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+@keyframes shimmer {
+	from {
+		transform: translateX(-100%);
+	}
+	to {
+		transform: translateX(100%);
+	}
+}
+
+body {
+	font-family: 'Nunito', sans-serif;
+	background-color: #f9f7f5;
+}
+
+@keyframes fadeIn {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}

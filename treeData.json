@@ -1,0 +1,329 @@
+[
+  {
+    "category": "Dairy & Eggs",
+    "subcategories": [
+      "Milk",
+      "Cheese",
+      "Eggs",
+      "Yogurt",
+      "Butter",
+      "Plant-Based Milk",
+      "Sour Cream & Cream Cheese",
+      "Cream",
+      "Coffee Creamer",
+      "Half & Half",
+      "Cottage Cheese"
+    ]
+  },
+  {
+    "category": "Meat & Seafood",
+    "subcategories": [
+      "Chicken",
+      "Beef",
+      "Pork",
+      "Turkey",
+      "Fish",
+      "Shellfish",
+      "Hot Dogs & Sausages",
+      "Lamb",
+      "Plant-Based Meat",
+      "Specialty Meats",
+      "delete"
+    ]
+  },
+  {
+    "category": "Produce",
+    "subcategories": [
+      "Fresh Fruits",
+      "Fresh Vegetables",
+      "Herbs"
+    ]
+  },
+  {
+    "category": "Frozen",
+    "subcategories": [
+      "Frozen Pizzas & Meals",
+      "Ice Cream & Popsicles",
+      "Frozen Snacks",
+      "Frozen Fruits",
+      "Frozen Vegetables",
+      "Frozen Breakfast",
+      "Frozen Meat & Seafood",
+      "Frozen Breads & Doughs",
+      "Frozen Desserts"
+    ]
+  },
+  {
+    "category": "Snacks & Candy",
+    "subcategories": [
+      "Crackers",
+      "Pudding & Gelatin",
+      "Cookies & Sweet Treats",
+      "Chocolate & Candy",
+      "Snack Bars",
+      "Nuts & Trail Mix",
+      "Dried Fruit & Fruit Snacks",
+      "Chips",
+      "Dips",
+      "More Snacks",
+      "Fruit Cups & Applesauce",
+      "Popcorn & Pretzels",
+      "Gum & Mints",
+      "Jerky"
+    ]
+  },
+  {
+    "category": "Deli",
+    "subcategories": [
+      "Deli Meats",
+      "Cheese",
+      "Olives, Dips, & Spreads",
+      "Meat & Cheese Combos",
+      "Tofu & Meat Alternatives"
+    ]
+  },
+  {
+    "category": "Bakery",
+    "subcategories": [
+      "Bread",
+      "Buns & Rolls",
+      "Cookies & Brownies",
+      "Bagels & English Muffins",
+      "Cakes & Pies",
+      "Breakfast Pastries",
+      "More Desserts",
+      "Tortillas & Flatbreads"
+    ]
+  },
+  {
+    "category": "Beverages",
+    "subcategories": [
+      "Soft Drinks",
+      "Sports Drinks",
+      "Coffee",
+      "Water & Sparkling Water",
+      "Energy Drinks",
+      "Juice",
+      "Milk",
+      "Kombucha & Probiotic Drinks",
+      "Mixers & Non-Alcoholic Drinks",
+      "Tea",
+      "Drink Mixes",
+      "Protein Drinks"
+    ]
+  },
+  {
+    "category": "Canned Goods & Soups",
+    "subcategories": [
+      "Canned Tomatoes",
+      "Soups",
+      "Canned Beans",
+      "Canned Meat",
+      "Canned Fish",
+      "Canned Fruits",
+      "Broths & Stocks",
+      "Canned Vegetables",
+      "Canned Meals",
+      "Canned Coconut"
+    ]
+  },
+  {
+    "category": "Prepared Foods",
+    "subcategories": [
+      "Sandwiches & Wraps",
+      "Pizza & Meals",
+      "Party Platters & Trays",
+      "Salads",
+      "Chicken",
+      "Prepared Breakfast",
+      "Other Prepared Meats",
+      "Snack Packs",
+      "Soups"
+    ]
+  },
+  {
+    "category": "Dry Goods & Pasta",
+    "subcategories": [
+      "Rices & Grains",
+      "Pasta",
+      "Boxed Meals & Sides",
+      "Canned Tomato",
+      "Pasta & Pizza Sauces",
+      "Beans",
+      "Seeds"
+    ]
+  },
+  {
+    "category": "Household",
+    "subcategories": [
+      "Paper Goods",
+      "Cleaning Solutions",
+      "Laundry",
+      "Foil & Plastic Wrap",
+      "Trash Bins & Bags",
+      "Candles & Air Fresheners",
+      "Cleaning Tools",
+      "Housewares"
+    ]
+  },
+  {
+    "category": "Condiments & Sauces",
+    "subcategories": [
+      "Mustard",
+      "Mayonnaise",
+      "Salad Dressings",
+      "Pasta Sauces",
+      "Hot Sauces",
+      "Asian Sauces",
+      "Barbecue Sauce",
+      "Salsa",
+      "Salad Toppings",
+      "Olives & Pickled Goods",
+      "Pastes",
+      "More Condiments & Sauces",
+      "Relish",
+      "Ketchup"
+    ]
+  },
+  {
+    "category": "Oils, Vinegars, & Spices",
+    "subcategories": [
+      "Spices & Seasoning",
+      "Bread Crumbs",
+      "Salt & Pepper",
+      "Cooking Oils",
+      "Vinegar"
+    ]
+  },
+  {
+    "category": "Breakfast",
+    "subcategories": [
+      "Nut Butters",
+      "Breakfast Bars",
+      "Oatmeal",
+      "Pancake & Waffle Mix",
+      "Granola",
+      "Jams & Jellies",
+      "Toaster Pastries",
+      "Cereal",
+      "Maple Syrup"
+    ]
+  },
+  {
+    "category": "Baking Essentials",
+    "subcategories": [
+      "Baking Mixes",
+      "Baking Chocolates & Morsels",
+      "Flours",
+      "Honey, Syrup, & Sweeteners",
+      "Baking Powders",
+      "Sugars",
+      "Doughs",
+      "Marshmallows",
+      "Frosting & Cake Decorations",
+      "Pie Crusts & Fillings",
+      "Ice Cream Cones",
+      "Baking Milks",
+      "Extracts"
+    ]
+  },
+  {
+    "category": "Kitchen Supplies",
+    "subcategories": [
+      "Kitchen Utensils",
+      "Cookware & Bakeware",
+      "Knives & Silverware",
+      "Food Storage",
+      "Plates & Bowls",
+      "Kitchen Gadgets & Appliances",
+      "Disposable Plates & Utensils",
+      "Kitchen Organization",
+      "To-Go Drinkware",
+      "Glasses & Mugs"
+    ]
+  },
+  {
+    "category": "Pets",
+    "subcategories": [
+      "Dogs",
+      "Cats",
+      "More Pet Supplies"
+    ]
+  },
+  {
+    "category": "Alcohol",
+    "subcategories": [
+      "Wine",
+      "Beer",
+      "Hard Beverages",
+      "Non-Alcoholic",
+      "Liquor"
+    ]
+  },
+  {
+    "category": "Personal Care",
+    "subcategories": [
+      "Body Care",
+      "Deodorant",
+      "Skin Care",
+      "Hair Care",
+      "Oral Hygiene",
+      "Cosmetics",
+      "Shaving",
+      "Eye & Ear Care"
+    ]
+  },
+  {
+    "category": "Baby",
+    "subcategories": [
+      "Baby Toys",
+      "Diapers & Wipes",
+      "Baby Food & Drinks",
+      "More Baby Supplies",
+      "Bottles & Formula",
+      "Baby Health Care",
+      "Baby Bath"
+    ]
+  },
+  {
+    "category": "Health Care",
+    "subcategories": [
+      "Vitamins & Supplements",
+      "Cold, Flu & Allergy",
+      "Protein, Performance & Weight Management",
+      "Specialty Treatments",
+      "Digestive & Stomach Relief",
+      "First Aid",
+      "Children's Health Care"
+    ]
+  },
+  {
+    "category": "Office & Craft",
+    "subcategories": [
+      "Pens & Pencils",
+      "Notebooks & Paper",
+      "Art & Craft Supplies",
+      "Kids Arts & Crafts",
+      "Office Supplies",
+      "Other Office Supplies"
+    ]
+  },
+  {
+    "category": "Party & Gift Supplies",
+    "subcategories": [
+      "Toys & Games"
+    ]
+  },
+  {
+    "category": "Laundry",
+    "subcategories": [
+      "Detergent",
+      "Stain removers",
+      "Fabric enhancers"
+    ]
+  },
+  {
+    "category": "7/29 Weekly Ad",
+    "subcategories": []
+  }
+]

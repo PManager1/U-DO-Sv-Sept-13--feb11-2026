@@ -1,0 +1,22 @@
+[
+  { "id": "plumbing", "name": "Plumbing", "icon": "🔧", "category": "Home Repair", "isActive": true },
+  { "id": "electrical", "name": "Electrical", "icon": "⚡", "category": "Home Repair", "isActive": true },
+  { "id": "mobile_tire", "name": "Mobile Tire Change", "icon": "🛞", "category": "Automotive", "isActive": true },
+  { "id": "home_cleaning", "name": "Home Cleaning", "icon": "🧹", "category": "Cleaning", "isActive": true },
+  { "id": "hvac", "name": "HVAC Repair", "icon": "❄️", "category": "Home Repair", "isActive": false },
+  { "id": "painting", "name": "Painting", "icon": "🎨", "category": "Home Improvement", "isActive": false },
+  { "id": "moving", "name": "Moving & Packing", "icon": "📦", "category": "Moving", "isActive": false },
+  { "id": "furniture_assembly", "name": "Furniture Assembly", "icon": "🪛", "category": "Home Improvement", "isActive": true },
+  { "id": "lawn_care", "name": "Lawn Care & Gardening", "icon": "🌿", "category": "Outdoor", "isActive": false },
+  { "id": "snow_removal", "name": "Snow Removal", "icon": "⛄", "category": "Outdoor", "isActive": false },
+  { "id": "carpet_cleaning", "name": "Carpet Cleaning", "icon": "🧼", "category": "Cleaning", "isActive": false },
+  { "id": "window_cleaning", "name": "Window Cleaning", "icon": "🪟", "category": "Cleaning", "isActive": false },
+  { "id": "appliance_repair", "name": "Appliance Repair", "icon": "🔌", "category": "Home Repair", "isActive": false },
+  { "id": "locksmith", "name": "Locksmith", "icon": "🔐", "category": "Security", "isActive": false },
+  { "id": "pest_control", "name": "Pest Control", "icon": "🐜", "category": "Home", "isActive": false },
+  { "id": "handyman", "name": "Handyman Services", "icon": "🛠️", "category": "Home Repair", "isActive": true },
+  { "id": "roofing", "name": "Roofing", "icon": "🏠", "category": "Home Improvement", "isActive": false },
+  { "id": "pressure_washing", "name": "Pressure Washing", "icon": "💦", "category": "Outdoor", "isActive": false },
+  { "id": "pool_cleaning", "name": "Pool Cleaning", "icon": "🏊", "category": "Outdoor", "isActive": false },
+  { "id": "dog_walking", "name": "Dog Walking & Pet Care", "icon": "🐾", "category": "Pets", "isActive": false }
+]
