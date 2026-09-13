@@ -92,6 +92,9 @@
 	let draggedImageUrl = $state<string | null>(null);
 	let bannerDragOver = $state(false);
 	let logoError = $state(false);
+	function getLogoUrl(b: any) {
+		return b?.logoUrl || b?.logo_url || '';
+	}
 	let tagsInput = $state('');
 	let tl = $state<Record<string, boolean>>({});
 
@@ -186,7 +189,7 @@
 			carouselImagesText: (brand.carouselImages || []).join('\n'),
 			imageTagsText: JSON.stringify(brand.imageTags || {}, null, 2),
 			bannerUrl: brand.bannerUrl || '',
-			logoUrl: brand.logoUrl || '',
+				logoUrl: brand.logoUrl || brand.logo_url || '',
 			videoUrl: brand.videoUrl || ''
 		};
 		editing = true;
@@ -401,11 +404,11 @@
 					<a href="/admin/brands" class="text-orange-500 font-medium text-sm inline-block mt-2">Back to Brands</a>
 				</div>
 			{:else}
-			<div class="flex items-center gap-4 mt-3">
-				<!-- Logo — clickable to upload -->
+			<!-- Logo below Back to Brands -->
+			<div class="mt-3 flex items-center gap-4">
 				<label class="inline-flex w-14 h-14 rounded-xl overflow-hidden cursor-pointer relative group flex-shrink-0 border border-gray-100">
-					{#if brand.logoUrl && !logoError}
-						<img src={brand.logoUrl} alt={brand.name} class="w-full h-full object-cover" onerror={() => (logoError = true)} />
+					{#if getLogoUrl(brand) && !logoError}
+						<img src={getLogoUrl(brand)} alt={brand.name} class="w-full h-full object-cover" onerror={() => (logoError = true)} />
 						<div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
 							<span class="text-white text-xs font-semibold">Change</span>
 						</div>
@@ -418,19 +421,16 @@
 					<input type="file" accept="image/*" class="hidden" onchange={(e) => { const f = (e.currentTarget as HTMLInputElement).files?.[0]; if (f) uploadLogoFile(f); }} />
 				</label>
 				<div>
-					<div class="flex items-center gap-2">
-						<h1 class="text-2xl font-bold text-gray-900">
-							{brand.name}
-							{#if brand.manualLocationCount > 0}<span class="text-xs text-gray-400 ml-1">({brand.manualLocationCount.toLocaleString('en-US')})</span>{/if}
-						</h1>
-						<span class={`text-xs px-2 py-0.5 rounded-full font-medium ${typeBadgeColors[brand.brandType] || 'bg-gray-100 text-gray-700'}`}>{typeLabels[brand.brandType] || brand.brandType}</span>
-					</div>
+					<h1 class="text-2xl font-bold text-gray-900">
+						{brand.name}
+						{#if brand.manualLocationCount > 0}<span class="text-xs text-gray-400 ml-1">({brand.manualLocationCount.toLocaleString('en-US')})</span>{/if}
+					</h1>
 					<p class="text-sm text-gray-500">{brand.description || 'No description set'}</p>
 				</div>
 				<div class="ml-auto flex items-center gap-2">
 					<a href="/admin/brands" class="bg-violet-600 text-white px-4 py-2 rounded-lg hover:bg-violet-700 text-sm font-medium">+ Add Brand</a>
 					<label class="cursor-pointer bg-gray-100 hover:bg-gray-200 text-gray-600 px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-1.5">
-						📷 {brand.logoUrl && !logoError ? 'Change Logo' : 'Upload Logo'}
+						📷 {getLogoUrl(brand) && !logoError ? 'Change Logo' : 'Upload Logo'}
 						<input type="file" accept="image/*" class="hidden" onchange={(e) => { const f = (e.currentTarget as HTMLInputElement).files?.[0]; if (f) uploadLogoFile(f); }} />
 					</label>
 				</div>
