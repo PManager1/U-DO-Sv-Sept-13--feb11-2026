@@ -1272,6 +1272,15 @@ function handleSaveRow(ai: number, ii: number) {
 			<div class="bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-3">
 				<a href={brand?.brandType === 'grocery' ? `/gstore/${brandId}` : `/store/${brandId}`} target="_blank" rel="noopener noreferrer" class="bg-gray-600 hover:bg-gray-700 text-white text-sm font-semibold px-5 py-2 rounded-lg transition flex items-center gap-2">🌐 Web</a>
 				<span class="text-xs text-gray-500">View this store on the public web</span>
+
+				<a 
+						href={`http://localhost:4000${brand?.brandType === 'grocery' ? `/gstore/${brandId}` : `/gstore/${brandId}`}`} 
+						target="_blank" 
+						rel="noopener noreferrer" 
+						class="bg-gray-600 hover:bg-gray-700 text-white text-sm font-semibold px-5 py-2 rounded-lg transition flex items-center gap-2"
+						>
+						🌐 Web-2
+						</a>
 			</div>
 
 			{#if parsedPreview}
@@ -1340,9 +1349,15 @@ function handleSaveRow(ai: number, ii: number) {
 							>
 								<div class="flex items-center gap-2 mb-3 px-3 py-2 rounded-lg bg-gray-100">
 									<span class="cursor-grab active:cursor-grabbing select-none text-gray-400" title="Drag to reorder">⠿</span>
-									<button type="button" onclick={() => toggleAisleExpanded(ai)} class="text-gray-500 hover:text-gray-700" title={previewExpanded[ai] !== false ? 'Collapse' : 'Expand'}>
-										{previewExpanded[ai] !== false ? '▾' : '▸'}
-									</button>
+									
+									<button type="button" 
+											onclick={() => toggleAisleExpanded(ai)} 
+											class="cursor-pointer p-1.5 text-xl text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded flex items-center justify-center transition-colors" 
+											title={previewExpanded[ai] !== false ? 'Collapse' : 'Expand'}
+										>
+											{previewExpanded[ai] !== false ? '▾' : '▸'}
+										</button>
+
 									<label class="flex items-center gap-1.5 text-2xl font-bold text-gray-800 cursor-pointer">
 										<input type="checkbox" checked={aisle.items.length > 0 && aisle.items.every((_: any, j: number) => selectedItems.has(`${ai}:${j}`))} onchange={() => toggleAisle(ai)} class="rounded" />
 										{aisle.category}
