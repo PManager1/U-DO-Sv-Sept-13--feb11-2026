@@ -112,6 +112,8 @@
 	let brand = $state<any>(null);
 	let activeTab = $state('upload');
 	let aislesData = $state<any>(null);
+	let categories = $state<any[]>([]);
+	let uploadCategoryId = $state('');
 	let uploadText = $state('');
 	let parsedPreview = $state<any>(null);
 	let error = $state<string | null>(null);
@@ -213,23 +215,26 @@
 
 	const headers = typeof window !== 'undefined' ? tokenManager.getHeaders() : {};
 
-	onMount(() => {
-		console.log('ONMOUNT FIRED WITH BRAND ID:', brandId);
-  		loadAisles();
 
-		fetch(API_BASE + 'brands/' + brandId, { headers })
-			.then((r) => r.json())
-			.then((b) => (brand = b))
-			.catch(() => (brand = null))  //;
-		// fetch(API_BASE + 'admin/brand-tags', { headers })
-		// 	.then((r) => r.json())
-		// 	.then((data: any) => {
-		// 		if (Array.isArray(data)) tagOptions = data;
-		// 		else if (Array.isArray(data.values)) tagOptions = data.values;
-		// 		else if (Array.isArray(data.tags)) tagOptions = data.tags;
-		// 	})
-			.catch(() => {});
-	});
+	onMount(() => {
+    console.log('ONMOUNT FIRED WITH BRAND ID:', brandId);
+    loadAisles();
+
+    fetch(API_BASE + 'brands/' + brandId, { headers })
+        .then((r) => r.json())
+        .then((b) => (brand = b))
+        .catch(() => (brand = null));
+
+    fetch(API_BASE + 'admin/categories', { headers })
+        .then((r) => r.json())
+        .then((data: any) => {
+            categories = Array.isArray(data?.categories) ? data.categories : (Array.isArray(data) ? data : []);
+        })
+        .catch(() => { categories = []; });
+});
+
+
+
 
 	$effect(() => {
 		if (!toast) return;
@@ -310,6 +315,10 @@ function loadAisles() {
 			error = 'No items/categories found in the uploaded data.';
 			return;
 		}
+	 	if (uploadCategoryId) {
+ 		normalized.aisles = normalized.aisles.map((a: any) => ({ ...a, category_id: uploadCategoryId }));
+	 	}
+
 		parsedPreview = normalized;
 		selectedItems = new Set();
 		const allExpanded: Record<string, boolean> = {};
@@ -772,6 +781,15 @@ function handleSaveRow(ai: number, ii: number) {
 			)
 		};
 	}
+
+	function updatePreviewAisleCategoryId(ai: number, categoryId: string) {
+	if (!parsedPreview) return;
+	parsedPreview = { ...parsedPreview, aisles: parsedPreview.aisles.map((a: any, x: number) => (x === ai ? { ...a, category_id: categoryId } : a)) };
+}
+
+const allAislesCategorized = $derived<boolean>(
+	!!parsedPreview && parsedPreview.aisles.length > 0 && parsedPreview.aisles.every((a: any) => !!a.category_id)
+);
 
 	function addTagFromRowInput(ai: number, ii: number, tagOverride?: string) {
 		const val = ((tagOverride ?? tagInputs[`${ai}:${ii}`]) || '').trim();
@@ -1249,6 +1267,22 @@ function handleSaveRow(ai: number, ii: number) {
 	<main class="max-w-6xl mx-auto px-6 py-6">
 		{#if activeTab === 'upload'}
 			<div class="bg-white rounded-xl border border-gray-200 p-5">
+
+
+			<div class="mb-4">
+					<label class="block text-sm font-medium text-gray-700 mb-1">Category for this upload</label>
+					<select
+						bind:value={uploadCategoryId}
+						class={`w-full sm:w-64 border rounded-lg px-3 py-2 text-sm ${uploadCategoryId ? 'border-gray-300' : 'border-red-400 bg-red-50'}`}
+					>
+						<option value="" disabled>Select category…</option>
+						{#each categories as c}
+							<option value={c.id}>{c.name}</option>
+						{/each}
+					</select>
+					<p class="text-xs text-gray-400 mt-1">Applies to every aisle in this JSON file. You can still override per-aisle below after parsing.</p>
+				</div>
+			 
 				<div
 					ondragover={(e) => { e.preventDefault(); dragOver = true; }}
 					ondragleave={() => (dragOver = false)}
@@ -1291,6 +1325,15 @@ function handleSaveRow(ai: number, ii: number) {
 						<button onclick={handleAppend} class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold">Append to Store Aisles</button>
 						<button onclick={handleMerge} class="bg-violet-600 hover:bg-violet-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold">Merge into Store Aisles</button>
 						<button onclick={handleReplace} class="bg-gray-600 hover:bg-gray-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold">Replace Store Aisles</button>
+
+
+						<!-- <button onclick={handleSavePreview} disabled={!allAislesCategorized} class="bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded-lg text-xs font-semibold">Save Preview to DB</button>
+						<button onclick={handleAppend} disabled={!allAislesCategorized} class="bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded-lg text-xs font-semibold">Append to Store Aisles</button>
+						<button onclick={handleMerge} disabled={!allAislesCategorized} class="bg-violet-600 hover:bg-violet-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded-lg text-xs font-semibold">Merge into Store Aisles</button>
+						<button onclick={handleReplace} disabled={!allAislesCategorized} class="bg-gray-600 hover:bg-gray-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded-lg text-xs font-semibold">Replace Store Aisles</button> -->
+
+
+
 						<button onclick={handleDeleteAll} disabled={deletingAll} class="bg-red-600 hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded-lg text-xs font-semibold">{deletingAll ? 'Deleting...' : 'Delete all'}</button>
 					</div>
 					<p class="px-5 py-2 text-xs text-gray-500 bg-gray-50 border-b border-gray-200">Append adds this file's aisles/items on top of what's already saved — use it to load multiple JSON files one after another.</p>
@@ -1362,6 +1405,11 @@ function handleSaveRow(ai: number, ii: number) {
 										<input type="checkbox" checked={aisle.items.length > 0 && aisle.items.every((_: any, j: number) => selectedItems.has(`${ai}:${j}`))} onchange={() => toggleAisle(ai)} class="rounded" />
 										{aisle.category}
 									</label>
+
+
+								
+
+
 									<span class="text-xs text-gray-400 ml-auto">{aisle.items.length} items</span>
 								</div>
 								{#if previewExpanded[ai] !== false}
