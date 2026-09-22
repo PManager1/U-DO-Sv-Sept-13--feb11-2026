@@ -210,8 +210,13 @@
 	let storeBatchInput = $state<HTMLInputElement>();
 	let storeBatchDrag = $state(false);
 
-	const isGrocery = $derived(brand?.brandType === 'grocery');
+	// const isGrocery = $derived(brand?.brandType === 'grocery');
 	// const isGrocery = $derived(brand?.brand_type === 'grocery' || brand?.brandType === 'grocery');
+
+	const brandTypeValue = $derived(
+		String(brand?.brandType ?? brand?.brand_type ?? brand?.type ?? '').toLowerCase()
+	);
+	const isGrocery = $derived(brandTypeValue === 'grocery');
 
 	const headers = typeof window !== 'undefined' ? tokenManager.getHeaders() : {};
 
@@ -220,17 +225,33 @@
     console.log('ONMOUNT FIRED WITH BRAND ID:', brandId);
     loadAisles();
 
-    fetch(API_BASE + 'brands/' + brandId, { headers })
-        .then((r) => r.json())
-        .then((b) => (brand = b))
-        .catch(() => (brand = null));
 
-    fetch(API_BASE + 'admin/categories', { headers })
-        .then((r) => r.json())
-        .then((data: any) => {
-            categories = Array.isArray(data?.categories) ? data.categories : (Array.isArray(data) ? data : []);
-        })
-        .catch(() => { categories = []; });
+
+    // fetch(API_BASE + 'brands/' + brandId, { headers })
+    //     .then((r) => r.json())
+    //     .then((b) => (brand = b))
+    //     .catch(() => (brand = null));
+
+    // fetch(API_BASE + 'admin/categories', { headers })
+    //     .then((r) => r.json())
+    //     .then((data: any) => {
+    //         categories = Array.isArray(data?.categories) ? data.categories : (Array.isArray(data) ? data : []);
+    //     })
+    //     .catch(() => { categories = []; });
+
+	fetch(API_BASE + 'brands/' + brandId, { headers })
+    .then(async (r) => {
+        if (!r.ok) throw new Error(`brand fetch ${r.status}`);
+        return r.json();
+    })
+    .then((b) => {
+        console.log('BRAND RESPONSE:', b); // check the real shape, then remove
+        brand = b?.brand ?? b?.data ?? b;
+    })
+    .catch((err) => {
+        console.error(err);
+        brand = null;
+    });
 });
 
 
@@ -499,7 +520,7 @@ function loadAisles() {
 	let deletingAll = $state(false);
 
 	async function handleDeleteAll() {
-		if (!requireGrocery()) return;
+		// if (!requireGrocery()) return;
 		if (!confirm('Are you sure you want to delete ALL store aisles for this brand along with their uploaded images? This cannot be undone.')) return;
 
 		const urls = collectGcUrls(parsedPreview);
@@ -1492,7 +1513,13 @@ const allAislesCategorized = $derived<boolean>(
 												</div>
 												<div class="mt-2 flex justify-end gap-2">
 													<button onclick={() => openStoreImageModal(ai, ii)} disabled={!isGrocery} class={`min-w-[72px] px-3 py-1 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-all duration-200 active:scale-95 ${isGrocery ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}>store image</button>
-													<button onclick={() => openAddImageModal(ai, ii)} disabled={!isGrocery} class={`min-w-[72px] px-3 py-1 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-all duration-200 active:scale-95 ${isGrocery ? 'bg-violet-600 hover:bg-violet-700 text-white' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}>add more image</button>
+													<!-- <button onclick={() => openAddImageModal(ai, ii)} disabled={!isGrocery} class={`min-w-[72px] px-3 py-1 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-all duration-200 active:scale-95 ${isGrocery ? 'bg-violet-600 hover:bg-violet-700 text-white' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}>add more image</button> -->
+
+													<button onclick={() => openAddImageModal(ai, ii)}
+														class="min-w-[72px] px-3 py-1 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition-all duration-200 active:scale-95 bg-violet-600 hover:bg-violet-700 text-white">
+														add more image
+													</button>
+
 													<button onclick={() => upToGC(ai, ii)} disabled={!isGrocery || gCLoadingKey === `${ai}:${ii}`} class="bg-sky-600 hover:bg-sky-700 text-white px-3 py-1 rounded-lg text-xs font-medium">{gCLoadingKey === `${ai}:${ii}` ? 'Uploading...' : 'up to GC'}</button>
 													<button onclick={() => delGC(ai, ii)} disabled={!isGrocery || delGCLoadingKey === `${ai}:${ii}`} class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-lg text-xs font-medium">{delGCLoadingKey === `${ai}:${ii}` ? 'Deleting...' : 'del GC'}</button>
 													<!-- <button onclick={() => handleSaveRow(ai, ii)} disabled={!isGrocery || savingRowKey === `${ai}:${ii}`} class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded-lg text-xs font-medium">{savingRowKey === `${ai}:${ii}` ? 'Saving...' : 'Save'}</button> -->
