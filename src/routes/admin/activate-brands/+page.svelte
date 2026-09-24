@@ -3,6 +3,7 @@
 	import API_BASE from '$lib/api';
 	import TagAutocomplete from '$lib/TagAutocomplete.svelte';
 	import TaggingTab from '$lib/TaggingTab.svelte';
+	import GeofencingTab from '$lib/GeofencingTab.svelte';
 
 	const SIDEBAR_TABS = [
 		{ key: 'home', label: 'Home', icon: '🏠' },
@@ -804,9 +805,7 @@
 				{/if}
 
 				{#if activeSidebarTab === 'tab3'}
-					<div class="bg-white rounded-xl border border-gray-200 p-8 text-center">
-						<h2 class="text-xl font-bold text-gray-900">Empty Tab</h2>
-					</div>
+					<GeofencingTab />
 				{/if}
 
 				{#if activeSidebarTab === 'tab4'}
