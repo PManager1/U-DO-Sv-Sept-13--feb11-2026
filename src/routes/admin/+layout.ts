@@ -6,6 +6,8 @@ import tokenManager from '$lib/tokenManager';
 export const load = async ({ url }) => {
 	const { pathname } = url;
 	if (
+		pathname === '/admin' ||
+		pathname === '/admin/' ||
 		pathname.startsWith('/admin/brands') ||
 		pathname.startsWith('/admin/GU') ||
 		pathname.startsWith('/admin/globalimagesync') ||
