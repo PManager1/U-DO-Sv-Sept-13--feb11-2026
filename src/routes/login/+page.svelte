@@ -3,7 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { openSignUp } from '$lib/authModal.svelte';
 	import { supabase } from '$lib/supabase';
-	import { exchangeSupabaseSession } from '$lib/authBridge';
+	import { exchangeSupabaseSession, sendOtp } from '$lib/authBridge';
 	import { signup, clearStored } from '$lib/signup.svelte';
 
 	let phoneNumber = $state('');
@@ -56,15 +56,7 @@
 		message = { text: '', type: '' };
 		try {
 			const cleanedNumber = phoneNumber.replace(/\D/g, '');
-			const result = await supabase.auth.signInWithOtp({
-				phone: '+1' + cleanedNumber,
-				options: {
-					data: {
-						full_name: signup.fullName || ''
-					}
-				}
-			});
-			if (result.error) throw new Error(result.error.message);
+			await sendOtp('phone', '+1' + cleanedNumber);
 			clearStored();
 			message = { text: 'OTP sent successfully! Redirecting...', type: 'success' };
 			setTimeout(() => {

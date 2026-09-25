@@ -3,7 +3,7 @@
 	import tokenManager from './tokenManager';
 	import { authModal, closeSignIn, openSignUp } from './authModal.svelte';
 	import { supabase } from './supabase';
-	import { exchangeSupabaseSession } from './authBridge';
+	import { exchangeSupabaseSession, sendOtp, verifyOtp } from './authBridge';
 
 	let mode = $state<'phone' | 'email'>('phone');
 	let stage = $state<'entry' | 'otp'>('entry');
@@ -92,10 +92,7 @@
 		loading = true;
 		try {
 			if (mode === 'phone') {
-				const result = await supabase.auth.signInWithOtp({
-					phone: cleanPhone(phone)
-				});
-				if (result.error) throw new Error(result.error.message);
+				await sendOtp('phone', cleanPhone(phone));
 			} else {
 				const result = await supabase.auth.signInWithOtp({
 					email: email.toLowerCase().trim()
@@ -152,22 +149,18 @@
 		loading = true;
 		message = { text: '', type: '' };
 		try {
-			let result;
+			let exchanged = true;
 			if (mode === 'phone') {
-				result = await supabase.auth.verifyOtp({
-					phone: cleanPhone(phone),
-					type: 'sms',
-					token: code
-				});
+				await verifyOtp('phone', cleanPhone(phone), code);
 			} else {
-				result = await supabase.auth.verifyOtp({
+				const result = await supabase.auth.verifyOtp({
 					email: email.toLowerCase().trim(),
 					type: 'email',
 					token: code
 				});
+				if (result.error) throw new Error(result.error.message);
+				exchanged = await exchangeSupabaseSession();
 			}
-			if (result.error) throw new Error(result.error.message);
-			const exchanged = await exchangeSupabaseSession();
 			if (exchanged) {
 				message = { text: 'Verified!', type: 'success' };
 				setTimeout(() => {
@@ -187,10 +180,7 @@
 		message = { text: '', type: '' };
 		try {
 			if (mode === 'phone') {
-				const result = await supabase.auth.signInWithOtp({
-					phone: cleanPhone(phone)
-				});
-				if (result.error) throw new Error(result.error.message);
+				await sendOtp('phone', cleanPhone(phone));
 			} else {
 				const result = await supabase.auth.signInWithOtp({
 					email: email.toLowerCase().trim()

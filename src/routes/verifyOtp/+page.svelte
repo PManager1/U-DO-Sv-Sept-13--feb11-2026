@@ -1,6 +1,5 @@
 <script lang="ts">
-	import { supabase } from '$lib/supabase';
-	import { exchangeSupabaseSession } from '$lib/authBridge';
+	import { sendOtp, verifyOtp } from '$lib/authBridge';
 	import { goto } from '$app/navigation';
 	import { openSignIn, openSignUp } from '$lib/authModal.svelte';
 
@@ -66,19 +65,9 @@
 		const cleanedNumber = phone.replace(/\D/g, '');
 		const finalNumber = '+1' + cleanedNumber;
 		try {
-			const result = await supabase.auth.verifyOtp({
-				phone: finalNumber,
-				type: 'sms',
-				token: code
-			});
-			if (result.error) throw new Error(result.error.message);
-			const exchanged = await exchangeSupabaseSession();
-			if (exchanged) {
-				message = { text: 'Verified! Redirecting...', type: 'success' };
-				setTimeout(() => goto('/'), 1000);
-			} else {
-				throw new Error('Failed to exchange session');
-			}
+			await verifyOtp('phone', finalNumber, code);
+			message = { text: 'Verified! Redirecting...', type: 'success' };
+			setTimeout(() => goto('/'), 1000);
 		} catch (error: any) {
 			message = { text: error.message || 'Verification failed. Please try again.', type: 'error' };
 			loading = false;
@@ -90,8 +79,7 @@
 		const cleanedNumber = phone.replace(/\D/g, '');
 		const finalNumber = '+1' + cleanedNumber;
 		try {
-			const result = await supabase.auth.signInWithOtp({ phone: finalNumber });
-			if (result.error) throw new Error(result.error.message);
+			await sendOtp('phone', finalNumber);
 			message = { text: 'New code sent!', type: 'success' };
 			otp = ['', '', '', '', '', ''];
 			refs[0]?.focus();

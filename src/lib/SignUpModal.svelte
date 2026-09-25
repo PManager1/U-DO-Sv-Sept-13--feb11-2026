@@ -2,7 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { signup, saveStep1 } from './signup.svelte';
 	import { authModal, closeSignUp, openSignIn } from './authModal.svelte';
-	import { supabase } from './supabase';
+	import { sendOtp } from './authBridge';
 
 	let fullName = $state(signup.fullName || '');
 	let phone = $state(signup.phone || '');
@@ -83,11 +83,7 @@
 			const digits = phone.replace(/\D/g, '');
 			const national = digits.slice(-10);
 			const e164 = '+1' + national;
-			const result = await supabase.auth.signInWithOtp({
-				phone: e164,
-				options: { data: { full_name: fullName.trim() } }
-			});
-			if (result.error) throw new Error(result.error.message);
+			await sendOtp('phone', e164);
 			closeSignUp();
 			goto(`/verifyOtp?phone=${encodeURIComponent(national)}`);
 		} catch (error: any) {
