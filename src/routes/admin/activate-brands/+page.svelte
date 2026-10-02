@@ -169,14 +169,24 @@
 		}
 	}
 
-	function fetchBrands() {
-		const params = new URLSearchParams();
-		params.set('limit', '100');
-		fetch(API_BASE + 'admin/brands?' + params.toString())
-			.then((r) => r.json())
-			.then((data: any) => setBrands(Array.isArray(data) ? data : data?.brands || []))
-			.catch(() => (brands = []))
-			.finally(() => (loading = false));
+	// Load every page so client-side search/filter sees all brands
+	async function fetchBrands() {
+		const pageUrl = (pg: number) => API_BASE + `admin/brands?limit=100&page=${pg}`;
+		try {
+			const first = await fetch(pageUrl(1)).then((r) => r.json());
+			if (Array.isArray(first)) return setBrands(first);
+			const totalPages = first?.totalPages || 1;
+			const rest = await Promise.all(
+				Array.from({ length: totalPages - 1 }, (_, i) =>
+					fetch(pageUrl(i + 2)).then((r) => r.json())
+				)
+			);
+			setBrands([first, ...rest].flatMap((d: any) => d?.brands || []));
+		} catch {
+			brands = [];
+		} finally {
+			loading = false;
+		}
 	}
 	function setBrands(list: any[]) {
 		brands = list;
