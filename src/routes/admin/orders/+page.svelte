@@ -59,13 +59,49 @@
 		}
 	}
 
+	// udo3 Admin API returns snake_case orders; map to the camelCase shape the template uses
+	function normalizeOrder(o: any) {
+		const num = (v: any) => (v == null ? 0 : Number(v) || 0);
+		const customerName =
+			[o.customer_first_name, o.customer_last_name].filter(Boolean).join(' ') ||
+			o.customer_name ||
+			o.customer_email;
+		return {
+			...o,
+			orderNumber: o.order_number,
+			paymentStatus: o.payment_status,
+			brandName: o.brand_name,
+			brandLogo: o.brand_logo,
+			brandType: o.brand_type,
+			customerId: o.user_id,
+			customerName,
+			customerPhone: o.customer_phone,
+			customerEmail: o.customer_email,
+			subtotal: num(o.subtotal),
+			deliveryFee: num(o.delivery_fee),
+			serviceFee: num(o.service_fee),
+			tax: num(o.tax),
+			tip: num(o.tip),
+			total: num(o.total_amount),
+			deliveryAddress: { ...(o.delivery_address || {}), instructions: o.delivery_notes },
+			items: (o.items_snapshot || []).map((i: any) => ({
+				...i,
+				quantity: i.qty ?? i.quantity ?? 1,
+				price: num(i.price),
+				image: i.image_url
+			})),
+			createdAt: o.inserted_at
+		};
+	}
+
 	async function fetchOrders() {
 		try {
 			loading = true;
 			error = null;
-			const res = await fetch(API_BASE + 'admin/brand-orders');
+			const res = await fetch(API_BASE + 'admin/orders');
+			if (!res.ok) throw new Error(`Server returned ${res.status}`);
 			const data = await res.json();
-			orders = Array.isArray(data) ? data : [];
+			orders = Array.isArray(data.data) ? data.data.map(normalizeOrder) : [];
 		} catch (err) {
 			console.error('Failed to fetch orders:', err);
 			error = (err as Error).message;
@@ -82,7 +118,7 @@
 		if (!id) return;
 		if (!confirm(`Delete order ${id}? This will remove it permanently.`)) return;
 		try {
-			const res = await fetch(API_BASE + `admin/brand-orders/${id}`, { method: 'DELETE' });
+			const res = await fetch(API_BASE + `admin/orders/${id}`, { method: 'DELETE' });
 			if (!res.ok) throw new Error(await res.text());
 			orders = orders.filter((o) => (o.id || o._id) !== id);
 		} catch (err) {
@@ -204,7 +240,8 @@
 										<span class="text-xs text-gray-400">{typeIcon(order.brandType)} {order.brandType}</span>
 									</div>
 									<div class="flex items-center gap-3 mt-1 text-xs text-gray-500">
-										<span>#{order.id ? order.id.slice(-8) : '—'}</span>
+										<span>#{order.orderNumber || (order.id ? order.id.slice(-8) : '—')}</span>
+										{#if order.customerName}<span>👤 {order.customerName}</span>{/if}
 										<span>{order.items?.length || 0} item{(order.items?.length || 0) !== 1 ? 's' : ''}</span>
 										<span>${(order.total || 0).toFixed(2)}</span>
 										<span class="uppercase text-[10px]">{order.orderType || '—'}</span>
@@ -229,6 +266,7 @@
 										<div class="bg-gray-50 rounded-lg p-3">
 											<div class="flex items-start gap-2 py-1"><span class="text-xs text-gray-500 w-28 flex-shrink-0">Name</span><span class="text-xs text-gray-900 flex-1">{order.customerName || '—'}</span></div>
 											<div class="flex items-start gap-2 py-1"><span class="text-xs text-gray-500 w-28 flex-shrink-0">Phone</span><span class="text-xs text-gray-900 flex-1">{order.customerPhone || '—'}</span></div>
+											<div class="flex items-start gap-2 py-1"><span class="text-xs text-gray-500 w-28 flex-shrink-0">Email</span><span class="text-xs text-gray-900 flex-1">{order.customerEmail || '—'}</span></div>
 											<div class="flex items-start gap-2 py-1"><span class="text-xs text-gray-500 w-28 flex-shrink-0">Address</span><span class="text-xs text-gray-900 flex-1">{addr.address || [addr.street, addr.city, addr.state, addr.zip].filter(Boolean).join(', ') || '—'}</span></div>
 											<div class="flex items-start gap-2 py-1"><span class="text-xs text-gray-500 w-28 flex-shrink-0">ID</span><span class="text-xs text-gray-900 flex-1">{order.customerId || '—'}</span></div>
 										</div>
@@ -325,6 +363,7 @@
 											<div class="flex items-start gap-2 py-1"><span class="text-xs text-gray-500 w-28 flex-shrink-0">Type</span><span class="text-xs text-gray-900 flex-1">{order.orderType || '—'}</span></div>
 											<div class="flex items-start gap-2 py-1"><span class="text-xs text-gray-500 w-28 flex-shrink-0">Source</span><span class="text-xs text-gray-900 flex-1">{order.source || '—'}</span></div>
 											<div class="flex items-start gap-2 py-1"><span class="text-xs text-gray-500 w-28 flex-shrink-0">Status</span><span class="text-xs text-gray-900 flex-1">{order.status || '—'}</span></div>
+											<div class="flex items-start gap-2 py-1"><span class="text-xs text-gray-500 w-28 flex-shrink-0">Payment</span><span class="text-xs text-gray-900 flex-1">{order.paymentStatus || '—'}</span></div>
 											<div class="flex items-start gap-2 py-1"><span class="text-xs text-gray-500 w-28 flex-shrink-0">Placed at</span><span class="text-xs text-gray-900 flex-1">{formatTime(order.createdAt)}</span></div>
 										</div>
 									</div>
