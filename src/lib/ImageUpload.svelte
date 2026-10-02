@@ -66,7 +66,8 @@
 		uploading = true;
 		error = null;
 		const formData = new FormData();
-		files.forEach((f) => formData.append('images', f));
+		// "images[]" so Phoenix receives every file as a list (plain "images" keeps only the last one)
+		files.forEach((f) => formData.append('images[]', f));
 		try {
 			const res = await fetch(API_BASE + `admin/brands/${brandId}/carousel`, { method: 'POST', body: formData });
 			if (res.ok) {

@@ -14,6 +14,8 @@
 	let toast = $state<{ type: string; text: string } | null>(null);
 	let loadingAddresses = $state<string | null>(null);
 	let userAddresses = $state<Record<string, any[]>>({});
+	let loadingDetails = $state<string | null>(null);
+	let userDetails = $state<Record<string, any>>({});
 	let updatingStatusUserId = $state<string | null>(null);
 	let userStatuses = $state<Record<string, string>>({});
 	let imageModalOpen = $state(false);
@@ -59,6 +61,7 @@
 				return;
 			}
 			users = users.map((u) => (u._id === userId ? { ...u, roles, role: roles[0] } : u));
+			if (userDetails[userId]) userDetails[userId] = { ...userDetails[userId], roles, role: roles[0] };
 			editingUserId = null;
 			toast = { type: 'success', text: 'Roles saved to database' };
 		} catch (err) {
@@ -136,15 +139,48 @@
 		loadData();
 	});
 
+	// udo3 Admin API returns snake_case profiles; map to the camelCase shape the template uses
+	function normalizeUser(u: any) {
+		return {
+			...u,
+			_id: u.id,
+			firstName: u.first_name,
+			lastName: u.last_name,
+			accountStatus: u.account_status,
+			profileImage: u.profile_image_url || u.picture,
+			createdAt: u.created_at,
+			updatedAt: u.updated_at,
+			verificationPhotos: u.verification_photos
+		};
+	}
+
+	function normalizeAddress(a: any) {
+		return {
+			...a,
+			street: a.display,
+			cityStateZip: a.unit_number ? `Unit ${a.unit_number}` : '',
+			isDefault: a.is_default,
+			gateCode: a.gate_code,
+			deliveryPreference: a.delivery_preference,
+			deliveryInstructions: a.instructions,
+			isGifting: a.is_gifting,
+			addressType: a.address_type,
+			createdAt: a.inserted_at,
+			lastUsedAt: null
+		};
+	}
+
 	async function loadData() {
 		loading = true;
 		error = null;
+		userDetails = {};
+		userAddresses = {};
 		try {
 			const res = await fetch(API_BASE + 'admin/users');
 			if (!res.ok) throw new Error(`Server returned ${res.status}`);
 			const data = await res.json();
-			const raw = data.users || data || [];
-			const extracted = raw.map((item: any) => item.user || item);
+			const raw = Array.isArray(data.data) ? data.data : [];
+			const extracted = raw.map(normalizeUser);
 			const seen = new Set();
 			const unique = extracted.filter((u: any) => {
 				if (!u._id || seen.has(u._id)) return false;
@@ -180,7 +216,24 @@
 			if (!userStatuses[u._id]) {
 				userStatuses = { ...userStatuses, [u._id]: 'account_under_review' };
 			}
+			loadUserDetails(u._id);
 			loadUserAddresses(u._id);
+		}
+	}
+
+	async function loadUserDetails(userId: string) {
+		if (userDetails[userId]) return;
+
+		loadingDetails = userId;
+		try {
+			const res = await fetch(API_BASE + `admin/users/${userId}`);
+			if (!res.ok) throw new Error(`Server returned ${res.status}`);
+			const data = await res.json();
+			userDetails[userId] = normalizeUser(data.data);
+		} catch (err) {
+			toast = { type: 'error', text: 'Failed to load user details: ' + (err as Error).message };
+		} finally {
+			if (loadingDetails === userId) loadingDetails = null;
 		}
 	}
 
@@ -191,8 +244,8 @@
 		try {
 			const res = await fetch(API_BASE + `admin/users/${userId}/addresses`);
 			if (!res.ok) throw new Error('Failed to load addresses');
-			const addresses = await res.json();
-			userAddresses[userId] = addresses;
+			const data = await res.json();
+			userAddresses[userId] = (data.data || []).map(normalizeAddress);
 		} catch (err) {
 			console.error('Failed to load addresses:', err);
 			userAddresses[userId] = [];
@@ -219,6 +272,45 @@
 		} catch {
 			return dateStr;
 		}
+	}
+
+	// Extra profile fields shown once the full record is loaded on expand
+	const DETAIL_FIELDS: [string, string][] = [
+		['name', 'Display Name'],
+		['gender', 'Gender'],
+		['date_of_birth', 'Date of Birth'],
+		['home_address', 'Home Address'],
+		['auth_provider', 'Auth Provider'],
+		['subscription', 'Subscription'],
+		['is_verified', 'Verified'],
+		['is_provider', 'Provider'],
+		['customer_rating', 'Customer Rating'],
+		['customer_reviews_count', 'Reviews'],
+		['referral_code', 'Referral Code'],
+		['referred_by', 'Referred By'],
+		['stripe_customer_id', 'Stripe Customer ID'],
+		['stripe_connected_acct_id', 'Stripe Connect ID'],
+		['service_profile_id', 'Service Profile ID'],
+		['supabase_id', 'Supabase ID'],
+		['currency', 'Currency'],
+		['time_zone', 'Time Zone'],
+		['language', 'Language']
+	];
+
+	const JSON_FIELDS: [string, string][] = [
+		['preferences', 'Preferences'],
+		['privacy', 'Privacy'],
+		['notifications', 'Notifications'],
+		['current_location', 'Current Location'],
+		['rider_profile', 'Rider Profile'],
+		['provider_selected_services', 'Provider Selected Services'],
+		['client_selected_services', 'Client Selected Services']
+	];
+
+	function formatValue(v: any) {
+		if (v === null || v === undefined || v === '') return '—';
+		if (typeof v === 'boolean') return v ? 'Yes' : 'No';
+		return String(v);
 	}
 
 	function getInitials(user: any) {
@@ -353,17 +445,40 @@
 				</div>
 
 				{#if isExpanded}
+					{@const d = userDetails[user._id] || user}
 					<div onclick={(e) => e.stopPropagation()} class="border-t border-gray-100 mt-4 pt-4 overflow-y-auto" style="max-height:70vh">
+						{#if loadingDetails === user._id}
+							<div class="flex items-center gap-2 text-xs text-gray-500 mb-3">
+								<svg class="animate-spin w-4 h-4 text-orange-500" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+								Loading details...
+							</div>
+						{/if}
 						<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-							<div><p class="text-xs font-medium text-gray-400">User ID</p><p class="font-mono text-xs text-gray-600 bg-gray-50 px-2 py-1 rounded mt-1 break-all">{user._id || '—'}</p></div>
-							<div><p class="text-xs font-medium text-gray-400">Role</p><p class="text-gray-700 mt-1 capitalize">{user.role || 'user'}</p></div>
-							<div><p class="text-xs font-medium text-gray-400">Email</p><p class="text-gray-700 mt-1">{user.email || '—'}</p></div>
-							<div><p class="text-xs font-medium text-gray-400">Phone</p><p class="text-gray-700 mt-1">{user.phoneNumber || user.phone || '—'}</p></div>
-							<div><p class="text-xs font-medium text-gray-400">First Name</p><p class="text-gray-700 mt-1">{user.firstName || '—'}</p></div>
-							<div><p class="text-xs font-medium text-gray-400">Last Name</p><p class="text-gray-700 mt-1">{user.lastName || '—'}</p></div>
-							<div><p class="text-xs font-medium text-gray-400">Created</p><p class="text-gray-700 mt-1">{formatDate(user.createdAt)}</p></div>
-							<div><p class="text-xs font-medium text-gray-400">Updated</p><p class="text-gray-700 mt-1">{formatDate(user.updatedAt)}</p></div>
+							<div><p class="text-xs font-medium text-gray-400">User ID</p><p class="font-mono text-xs text-gray-600 bg-gray-50 px-2 py-1 rounded mt-1 break-all">{d._id || '—'}</p></div>
+							<div><p class="text-xs font-medium text-gray-400">Role</p><p class="text-gray-700 mt-1 capitalize">{d.role || 'user'}</p></div>
+							<div><p class="text-xs font-medium text-gray-400">Email</p><p class="text-gray-700 mt-1">{d.email || '—'}</p></div>
+							<div><p class="text-xs font-medium text-gray-400">Phone</p><p class="text-gray-700 mt-1">{d.phone || '—'}</p></div>
+							<div><p class="text-xs font-medium text-gray-400">First Name</p><p class="text-gray-700 mt-1">{d.firstName || '—'}</p></div>
+							<div><p class="text-xs font-medium text-gray-400">Last Name</p><p class="text-gray-700 mt-1">{d.lastName || '—'}</p></div>
+							{#each DETAIL_FIELDS as [key, label]}
+								<div><p class="text-xs font-medium text-gray-400">{label}</p><p class="text-gray-700 mt-1 break-all">{formatValue(d[key])}</p></div>
+							{/each}
+							<div><p class="text-xs font-medium text-gray-400">Created</p><p class="text-gray-700 mt-1">{formatDate(d.createdAt)}</p></div>
+							<div><p class="text-xs font-medium text-gray-400">Updated</p><p class="text-gray-700 mt-1">{formatDate(d.updatedAt)}</p></div>
 						</div>
+						{#if userDetails[user._id]}
+							{@const maps = JSON_FIELDS.filter(([key]) => d[key] && Object.keys(d[key]).length)}
+							{#if maps.length}
+								<div class="mt-4 space-y-2">
+									{#each maps as [key, label]}
+										<details class="bg-gray-50 border border-gray-200 rounded-lg">
+											<summary class="cursor-pointer px-3 py-2 text-xs font-medium text-gray-600">{label}</summary>
+											<pre class="px-3 pb-3 text-xs text-gray-700 whitespace-pre-wrap break-all">{JSON.stringify(d[key], null, 2)}</pre>
+										</details>
+									{/each}
+								</div>
+							{/if}
+						{/if}
 					</div>
 
 				<div onclick={(e) => e.stopPropagation()} class="border-t border-gray-100 mt-4 pt-4">
@@ -464,31 +579,31 @@
 					<div onclick={(e) => e.stopPropagation()} class="border-t border-gray-100 mt-4 pt-4">
 						<p class="text-xs font-medium text-black mb-3">📸 Verification Photos</p>
 						<div class="grid grid-cols-3 gap-3">
-							{#if user.verificationPhotos?.front}
+							{#if d.verificationPhotos?.front}
 								<div onclick={() => openImageModal(
-									[user.verificationPhotos.front, user.verificationPhotos.left, user.verificationPhotos.right].filter(Boolean),
-									['Front', 'Left Profile', 'Right Profile'].filter((_, i) => [user.verificationPhotos.front, user.verificationPhotos.left, user.verificationPhotos.right][i])
+									[d.verificationPhotos.front, d.verificationPhotos.left, d.verificationPhotos.right].filter(Boolean),
+									['Front', 'Left Profile', 'Right Profile'].filter((_, i) => [d.verificationPhotos.front, d.verificationPhotos.left, d.verificationPhotos.right][i])
 								)} class="cursor-pointer hover:opacity-80 transition-opacity">
 									<p class="text-xs text-gray-500 mb-1">Front</p>
-									<img src={user.verificationPhotos.front} alt="Front" class="w-full h-24 object-contain rounded-lg border border-gray-200" loading="lazy" />
+									<img src={d.verificationPhotos.front} alt="Front" class="w-full h-24 object-contain rounded-lg border border-gray-200" loading="lazy" />
 								</div>
 							{/if}
-							{#if user.verificationPhotos?.left}
+							{#if d.verificationPhotos?.left}
 								<div onclick={() => openImageModal(
-									[user.verificationPhotos.front, user.verificationPhotos.left, user.verificationPhotos.right].filter(Boolean),
-									['Front', 'Left Profile', 'Right Profile'].filter((_, i) => [user.verificationPhotos.front, user.verificationPhotos.left, user.verificationPhotos.right][i])
+									[d.verificationPhotos.front, d.verificationPhotos.left, d.verificationPhotos.right].filter(Boolean),
+									['Front', 'Left Profile', 'Right Profile'].filter((_, i) => [d.verificationPhotos.front, d.verificationPhotos.left, d.verificationPhotos.right][i])
 								)} class="cursor-pointer hover:opacity-80 transition-opacity">
 									<p class="text-xs text-gray-500 mb-1">Left Profile</p>
-									<img src={user.verificationPhotos.left} alt="Left" class="w-full h-24 object-contain rounded-lg border border-gray-200" loading="lazy" />
+									<img src={d.verificationPhotos.left} alt="Left" class="w-full h-24 object-contain rounded-lg border border-gray-200" loading="lazy" />
 								</div>
 							{/if}
-							{#if user.verificationPhotos?.right}
+							{#if d.verificationPhotos?.right}
 								<div onclick={() => openImageModal(
-									[user.verificationPhotos.front, user.verificationPhotos.left, user.verificationPhotos.right].filter(Boolean),
-									['Front', 'Left Profile', 'Right Profile'].filter((_, i) => [user.verificationPhotos.front, user.verificationPhotos.left, user.verificationPhotos.right][i])
+									[d.verificationPhotos.front, d.verificationPhotos.left, d.verificationPhotos.right].filter(Boolean),
+									['Front', 'Left Profile', 'Right Profile'].filter((_, i) => [d.verificationPhotos.front, d.verificationPhotos.left, d.verificationPhotos.right][i])
 								)} class="cursor-pointer hover:opacity-80 transition-opacity">
 									<p class="text-xs text-gray-500 mb-1">Right Profile</p>
-									<img src={user.verificationPhotos.right} alt="Right" class="w-full h-24 object-contain rounded-lg border border-gray-200" loading="lazy" />
+									<img src={d.verificationPhotos.right} alt="Right" class="w-full h-24 object-contain rounded-lg border border-gray-200" loading="lazy" />
 								</div>
 							{/if}
 						</div>
@@ -548,7 +663,7 @@
 </main>
 
 <div class="text-center text-xs text-gray-400 py-6 border-t border-gray-100 mt-8">
-	UDO Admin · Users · Backend at <code class="bg-gray-100 px-1 rounded">localhost:3030</code>
+	UDO Admin · Users · Backend at <code class="bg-gray-100 px-1 rounded">localhost:4000</code>
 </div>
 
 	{#if imageModalOpen}
