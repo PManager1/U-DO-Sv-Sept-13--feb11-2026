@@ -232,12 +232,18 @@
     //     .then((b) => (brand = b))
     //     .catch(() => (brand = null));
 
-    // fetch(API_BASE + 'admin/categories', { headers })
-    //     .then((r) => r.json())
-    //     .then((data: any) => {
-    //         categories = Array.isArray(data?.categories) ? data.categories : (Array.isArray(data) ? data : []);
-    //     })
-    //     .catch(() => { categories = []; });
+    fetch(API_BASE + 'admin/categories', { headers })
+        .then(async (r) => {
+            if (!r.ok) throw new Error(`categories fetch ${r.status}`);
+            return r.json();
+        })
+        .then((data: any) => {
+            categories = Array.isArray(data?.categories) ? data.categories : (Array.isArray(data) ? data : []);
+        })
+        .catch((err) => {
+            console.error(err);
+            categories = [];
+        });
 
 	fetch(API_BASE + 'brands/' + brandId, { headers })
     .then(async (r) => {
@@ -442,7 +448,17 @@ function loadAisles() {
 	async function persistAisles(payload: any, msg: string) {
     if (!payload) { 
         toast = { type: 'error', text: 'There is no store data to save yet.' }; 
-        return; 
+        return;
+    }
+    // Backend requires a category_id on every aisle; fill gaps from the upload dropdown.
+    payload = {
+        ...payload,
+        aisles: (payload.aisles || []).map((a: any) => (a.category_id ? a : { ...a, category_id: uploadCategoryId || undefined }))
+    };
+    const uncategorized = payload.aisles.filter((a: any) => !a.category_id);
+    if (uncategorized.length > 0) {
+        toast = { type: 'error', text: 'Select a category for: ' + uncategorized.map((a: any) => a.category || a.name || '(unnamed)').join(', ') };
+        return;
     }
     saving = true;
     toast = null;
@@ -1291,9 +1307,13 @@ const allAislesCategorized = $derived<boolean>(
 
 
 			<div class="mb-4">
-					<label class="block text-sm font-medium text-gray-700 mb-1">Category for this upload</label>
+					<label class="block text-sm font-medium text-gray-700 mb-1">Category for this upload (from categories table-DB)</label>
 					<select
 						bind:value={uploadCategoryId}
+						onchange={() => {
+							if (!parsedPreview?.aisles || !uploadCategoryId) return;
+							parsedPreview = { ...parsedPreview, aisles: parsedPreview.aisles.map((a: any) => (a.category_id ? a : { ...a, category_id: uploadCategoryId })) };
+						}}
 						class={`w-full sm:w-64 border rounded-lg px-3 py-2 text-sm ${uploadCategoryId ? 'border-gray-300' : 'border-red-400 bg-red-50'}`}
 					>
 						<option value="" disabled>Select category…</option>
