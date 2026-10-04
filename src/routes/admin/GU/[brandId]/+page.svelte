@@ -116,6 +116,8 @@
 	let uploadCategoryId = $state('');
 	let uploadText = $state('');
 	let parsedPreview = $state<any>(null);
+	// True only while parsedPreview holds a freshly parsed JSON file (not the saved store loaded from the DB).
+	let previewIsUpload = $state(false);
 	let error = $state<string | null>(null);
 	let toast = $state<{ type: string; text: string } | null>(null);
 	let previewExpanded = $state<Record<string, boolean>>({});
@@ -322,6 +324,7 @@ function loadAisles() {
       console.log('PAYLOAD RECEIVED:', data);
       aislesData = data;
       parsedPreview = data;
+      previewIsUpload = false;
     })
     .catch((err) => console.error('FETCH ERROR:', err));
 }
@@ -342,11 +345,12 @@ function loadAisles() {
 			error = 'No items/categories found in the uploaded data.';
 			return;
 		}
-	 	if (uploadCategoryId) {
- 		normalized.aisles = normalized.aisles.map((a: any) => ({ ...a, category_id: uploadCategoryId }));
-	 	}
+		if (uploadCategoryId) {
+			normalized.aisles = normalized.aisles.map((a: any) => (a.category_id ? a : { ...a, category_id: uploadCategoryId }));
+		}
 
 		parsedPreview = normalized;
+		previewIsUpload = true;
 		selectedItems = new Set();
 		const allExpanded: Record<string, boolean> = {};
 		normalized.aisles.forEach((_: any, i: number) => (allExpanded[i] = true));
@@ -455,14 +459,11 @@ function loadAisles() {
         toast = { type: 'error', text: 'There is no store data to save yet.' }; 
         return;
     }
-    // Backend requires a category_id on every aisle; fill gaps from the upload dropdown.
-    payload = {
-        ...payload,
-        aisles: (payload.aisles || []).map((a: any) => (a.category_id ? a : { ...a, category_id: uploadCategoryId || undefined }))
-    };
-    const uncategorized = payload.aisles.filter((a: any) => !a.category_id);
-    if (uncategorized.length > 0) {
-        toast = { type: 'error', text: 'Select a category for: ' + uncategorized.map((a: any) => a.category || a.name || '(unnamed)').join(', ') };
+    // Only send aisles from the uploaded file (they carry a category_id). Aisles loaded from the DB
+    // have none and are already saved; never stamp the dropdown's category onto them.
+    payload = { ...payload, aisles: (payload.aisles || []).filter((a: any) => a.category_id) };
+    if (payload.aisles.length === 0) {
+        toast = { type: 'error', text: 'Nothing new to save.' };
         return;
     }
     saving = true;
@@ -500,86 +501,75 @@ function loadAisles() {
     }
 }
 
+	// Save buttons only act on a freshly parsed file. After a save the preview shows the whole
+	// saved store, and re-sending that is what re-tagged every product with one category.
+	function requireUpload() {
+		if (!previewIsUpload || !parsedPreview?.aisles?.length) {
+			toast = { type: 'error', text: 'Upload or parse a JSON file first. The preview is showing what is already saved.' };
+			return false;
+		}
+		const uncategorized = parsedPreview.aisles.filter((a: any) => !a.category_id);
+		if (uncategorized.length > 0) {
+			toast = { type: 'error', text: 'Select a category for: ' + uncategorized.map((a: any) => a.category || a.name || '(unnamed)').join(', ') };
+			return false;
+		}
+		return true;
+	}
+
 	function handleMerge() {
 		if (!requireGrocery()) return;
-		if (!parsedPreview) return;
+		if (!requireUpload()) return;
 		if (selectedItems.size === 0) { toast = { type: 'error', text: 'No items selected to save. Select the aisles/items you want first.' }; return; }
 		persistAisles(mergeAisles(aislesData, filterParsedToSelected(parsedPreview, selectedItems)), 'Merged into Store Aisles');
 	}
 	function handleReplace() {
 		if (!requireGrocery()) return;
-		if (!parsedPreview) return;
+		if (!requireUpload()) return;
 		if (selectedItems.size === 0) { toast = { type: 'error', text: 'No items selected to save. Select the aisles/items you want first.' }; return; }
 		persistAisles(filterParsedToSelected(parsedPreview, selectedItems), 'Replaced Store Aisles');
 	}
 	function handleSavePreview() {
 		// if (!requireGrocery()) return;
-		if (!parsedPreview || !parsedPreview.aisles || parsedPreview.aisles.length === 0) { toast = { type: 'error', text: 'There is no data in the preview to save.' }; return; }
+		if (!requireUpload()) return;
 		persistAisles(parsedPreview, 'Preview saved successfully');
 	}
 	function handleAppend() {
 		if (!requireGrocery()) return;
-		if (!parsedPreview || !parsedPreview.aisles || parsedPreview.aisles.length === 0) { toast = { type: 'error', text: 'There is no data in the preview to append.' }; return; }
+		if (!requireUpload()) return;
 		const payload = selectedItems.size > 0 ? filterParsedToSelected(parsedPreview, selectedItems) : parsedPreview;
 		if (!payload || !payload.aisles || payload.aisles.length === 0) { toast = { type: 'error', text: 'No items to append.' }; return; }
 		persistAisles(appendAisles(aislesData, payload), 'Appended to Store Aisles');
-	}
-
-	function collectGcUrls(preview: any): string[] {
-		const urls = new Set<string>();
-		for (const aisle of preview?.aisles ?? []) {
-			for (const item of aisle.items ?? []) {
-				if (isGcUrl(item.raw_image_url)) urls.add(item.raw_image_url);
-				for (const img of item.images ?? []) {
-					if (img && isGcUrl(img.url)) urls.add(img.url);
-				}
-			}
-		}
-		return [...urls];
 	}
 
 	let deletingAll = $state(false);
 
 	async function handleDeleteAll() {
 		// if (!requireGrocery()) return;
-		if (!confirm('Are you sure you want to delete ALL store aisles for this brand along with their uploaded images? This cannot be undone.')) return;
-
-		const urls = collectGcUrls(parsedPreview);
-		let deleted = 0;
-		let failed = 0;
+		if (!confirm('Are you sure you want to delete ALL products for this store along with their uploaded images? This cannot be undone.')) return;
 
 		deletingAll = true;
 		toast = null;
-
-		for (const url of urls) {
-			try {
-				const res = await fetch(API_BASE + 'admin/delete-image', {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({ url })
-				});
-				if (res.ok) deleted++;
-				else failed++;
-			} catch {
-				failed++;
+		try {
+			const res = await fetch(API_BASE + 'admin/brands/' + brandId + '/products', { method: 'DELETE', headers });
+			const data = await res.json().catch(() => ({}));
+			if (res.ok) {
+				parsedPreview = null;
+				previewIsUpload = false;
+				selectedItems = new Set();
+				previewSearch = '';
+				toast = {
+					type: 'success',
+					text: `Deleted ${data.products_unlinked ?? 0} product(s) from this store (${data.products_deleted ?? 0} removed from the catalog), ${data.images_deleted ?? 0} image(s) deleted.`
+				};
+				loadAisles();
+			} else {
+				toast = { type: 'error', text: data.error || data.message || `Delete failed (${res.status})` };
 			}
+		} catch (err: any) {
+			toast = { type: 'error', text: 'Network error: ' + err.message };
+		} finally {
+			deletingAll = false;
 		}
-
-		parsedPreview = null;
-		selectedItems = new Set();
-		previewSearch = '';
-
-		await persistAisles({ store: null, aisles: [] }, 'All Store Aisles deleted');
-
-		if (failed > 0 && deleted > 0) {
-			toast = { type: 'error', text: `Store aisles cleared. ${deleted} image(s) deleted, but ${failed} failed to delete from GCS.` };
-		} else if (failed > 0) {
-			toast = { type: 'error', text: `Store aisles cleared, but ${failed} image(s) failed to delete from GCS.` };
-		} else if (deleted > 0) {
-			toast = { type: 'success', text: `All Store Aisles deleted; ${deleted} image(s) removed from GCS.` };
-		}
-
-		deletingAll = false;
 	}
 
 	// async function patchItem(ai: number, ii: number, itemObj: any, msg: string, key: string) {
@@ -1316,7 +1306,7 @@ const allAislesCategorized = $derived<boolean>(
 					<select
 						bind:value={uploadCategoryId}
 						onchange={() => {
-							if (!parsedPreview?.aisles || !uploadCategoryId) return;
+							if (!previewIsUpload || !parsedPreview?.aisles || !uploadCategoryId) return;
 							parsedPreview = { ...parsedPreview, aisles: parsedPreview.aisles.map((a: any) => (a.category_id ? a : { ...a, category_id: uploadCategoryId })) };
 						}}
 						class={`w-full sm:w-64 border rounded-lg px-3 py-2 text-sm ${uploadCategoryId ? 'border-gray-300' : 'border-red-400 bg-red-50'}`}
