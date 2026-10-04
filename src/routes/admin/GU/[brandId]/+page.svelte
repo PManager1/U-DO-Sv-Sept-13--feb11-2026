@@ -391,6 +391,11 @@ function loadAisles() {
 	function toggleAisleExpanded(ai: number) {
 		previewExpanded = { ...previewExpanded, [ai]: !previewExpanded[ai] };
 	}
+	function setAllAislesExpanded(expanded: boolean) {
+		const next: Record<string, boolean> = {};
+		(parsedPreview?.aisles || []).forEach((_: any, i: number) => (next[i] = expanded));
+		previewExpanded = next;
+	}
 	function moveAisle(from: number, to: number) {
 		const next = [...parsedPreview.aisles];
 		if (from === to || from < 0 || to < 0 || from >= next.length || to >= next.length) return;
@@ -1380,6 +1385,10 @@ const allAislesCategorized = $derived<boolean>(
 					<p class="px-5 py-2 text-xs text-gray-500 bg-gray-50 border-b border-gray-200">Append adds this file's aisles/items on top of what's already saved — use it to load multiple JSON files one after another.</p>
 					<div class="px-5 py-2 bg-white border-b border-gray-200">
 						<input type="text" bind:value={previewSearch} placeholder="Search items below..." class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+						<div class="flex items-center gap-2 mt-2">
+							<button type="button" onclick={() => setAllAislesExpanded(false)} class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded-lg text-xs font-medium">▸ Collapse all</button>
+							<button type="button" onclick={() => setAllAislesExpanded(true)} class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded-lg text-xs font-medium">▾ Expand all</button>
+						</div>
 					</div>
 					{#if previewSearch.trim()}
 						<div class="px-5 py-3 bg-blue-50/40 border-b border-gray-200">
