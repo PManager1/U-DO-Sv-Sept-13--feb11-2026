@@ -335,7 +335,7 @@
 				</div>
 			</AdminCard>
 
-			<AdminCard id="app-version" title="Min App Version" description="Force users to update when their app version is below the minimum." hidden={!visible('Min App Version', 'Force users to update when their app version is below the minimum.')} icon={iconVersion} iconBg="bg-cyan-100" {expandedCard} onToggle={toggleCard}>
+			<AdminCard id="app-version" title="App updates - Min Version" description="Force users to update when their app version is below the minimum." hidden={!visible('Min App Version', 'Force users to update when their app version is below the minimum.')} icon={iconVersion} iconBg="bg-cyan-100" {expandedCard} onToggle={toggleCard}>
 				<div class="space-y-3" onclick={(e) => e.stopPropagation()}>
 					<div>
 						<label class="block text-xs font-semibold text-gray-600 mb-1">iClient Min Version</label>

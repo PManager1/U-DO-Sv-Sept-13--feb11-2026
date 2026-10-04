@@ -4,6 +4,7 @@
 	import API_BASE from '$lib/api';
 	import tokenManager from '$lib/tokenManager';
 	import TagInput from '$lib/TagInput.svelte';
+	import MenuUpload from './MenuUpload.svelte';
 
 	let brandId = $derived(page.params.brandId as string);
 
@@ -219,6 +220,14 @@
 		String(brand?.brandType ?? brand?.brand_type ?? brand?.type ?? '').toLowerCase()
 	);
 	const isGrocery = $derived(brandTypeValue === 'grocery');
+	// Restaurants and local businesses get their own Menu tab (MenuUpload) instead of the grocery tools.
+	const isFoodStore = $derived(['restaurant', 'localbusiness'].includes(brandTypeValue));
+	const tabs = $derived(isFoodStore ? ['menu'] : ['upload', 'store', 'replacements']);
+	const TAB_LABELS: Record<string, string> = { menu: 'Menu', upload: 'Upload JSON', store: 'Store Aisles', replacements: 'Replacements' };
+
+	$effect(() => {
+		if (isFoodStore && activeTab !== 'menu') activeTab = 'menu';
+	});
 
 	const headers = typeof window !== 'undefined' ? tokenManager.getHeaders() : {};
 
@@ -1271,23 +1280,25 @@ const allAislesCategorized = $derived<boolean>(
 						<p class="text-sm text-gray-500">{brandId}</p>
 					</div>
 				</div>
-				{#if !isGrocery}
+				{#if brand && !isGrocery && !isFoodStore}
 					<span class="text-xs bg-amber-50 text-amber-700 px-3 py-1.5 rounded-full">Only grocery brands are supported</span>
 				{/if}
 			</div>
 			<div class="flex border-b border-gray-200 overflow-x-auto">
-				{#each ['upload', 'store', 'replacements'] as tab}
+				{#each tabs as tab}
 					<button
 						onclick={() => (activeTab = tab)}
 						class={`px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap cursor-pointer ${activeTab === tab ? 'border-violet-600 text-violet-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
 					>
-						{tab === 'upload' ? 'Upload JSON' : tab === 'store' ? 'Store Aisles' : 'Replacements'}
+						{TAB_LABELS[tab]}
 					</button>
 				{/each}
+				{#if !isFoodStore}
 				<a
 					href={`/admin/GU/${brandId}/tree-builder`}
 					class="ml-1 self-center inline-flex items-center gap-1.5 px-4 py-3 text-sm font-medium border-b-2 border-transparent text-gray-500 whitespace-nowrap transition-colors cursor-pointer hover:text-gray-700 hover:border-gray-300"
 				>🌳 Tree builder</a>
+				{/if}
 			</div>
 		</div>
 	</header>
@@ -1297,7 +1308,9 @@ const allAislesCategorized = $derived<boolean>(
 	{/if}
 
 	<main class="max-w-6xl mx-auto px-6 py-6">
-		{#if activeTab === 'upload'}
+		{#if activeTab === 'menu'}
+			<MenuUpload {brandId} {headers} />
+		{:else if activeTab === 'upload'}
 			<div class="bg-white rounded-xl border border-gray-200 p-5">
 
 
