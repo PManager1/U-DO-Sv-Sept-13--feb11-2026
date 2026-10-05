@@ -354,9 +354,8 @@ function loadAisles() {
 			error = 'No items/categories found in the uploaded data.';
 			return;
 		}
-		if (uploadCategoryId) {
-			normalized.aisles = normalized.aisles.map((a: any) => (a.category_id ? a : { ...a, category_id: uploadCategoryId }));
-		}
+		// Every new file starts with no category; it is only applied from the dropdown at save time.
+		uploadCategoryId = '';
 
 		parsedPreview = normalized;
 		previewIsUpload = true;
@@ -465,15 +464,15 @@ function loadAisles() {
 
 	async function persistAisles(payload: any, msg: string) {
     if (!payload) { 
-        toast = { type: 'error', text: 'There is no store data to save yet.' }; 
-        return;
+        toast = { type: 'error', text: 'There is no store data to save yet.' };
+        return false;
     }
     // Only send aisles from the uploaded file (they carry a category_id). Aisles loaded from the DB
     // have none and are already saved; never stamp the dropdown's category onto them.
     payload = { ...payload, aisles: (payload.aisles || []).filter((a: any) => a.category_id) };
     if (payload.aisles.length === 0) {
         toast = { type: 'error', text: 'Nothing new to save.' };
-        return;
+        return false;
     }
     saving = true;
     toast = null;
@@ -492,6 +491,7 @@ function loadAisles() {
         if (res.ok) {
             toast = { type: 'success', text: msg };
             loadAisles();
+            return true;
         } else {
             const text = await res.text();
             let m;
@@ -508,6 +508,7 @@ function loadAisles() {
     } finally {
         saving = false;
     }
+    return false;
 }
 
 	// Save buttons only act on a freshly parsed file. After a save the preview shows the whole
@@ -517,37 +518,46 @@ function loadAisles() {
 			toast = { type: 'error', text: 'Upload or parse a JSON file first. The preview is showing what is already saved.' };
 			return false;
 		}
-		const uncategorized = parsedPreview.aisles.filter((a: any) => !a.category_id);
-		if (uncategorized.length > 0) {
-			toast = { type: 'error', text: 'Select a category for: ' + uncategorized.map((a: any) => a.category || a.name || '(unnamed)').join(', ') };
+		if (!uploadCategoryId) {
+			alert('Select a category from the "Category for this upload" dropdown before saving.');
 			return false;
 		}
 		return true;
+	}
+
+	// The category comes only from the dropdown, stamped onto the uploaded aisles at save time.
+	function withUploadCategory(p: any) {
+		return p && { ...p, aisles: (p.aisles || []).map((a: any) => ({ ...a, category_id: uploadCategoryId })) };
+	}
+
+	// After a successful upload, clear the dropdown so the next file needs a fresh pick.
+	async function persistUpload(payload: any, msg: string) {
+		if (await persistAisles(payload, msg)) uploadCategoryId = '';
 	}
 
 	function handleMerge() {
 		if (!requireGrocery()) return;
 		if (!requireUpload()) return;
 		if (selectedItems.size === 0) { toast = { type: 'error', text: 'No items selected to save. Select the aisles/items you want first.' }; return; }
-		persistAisles(mergeAisles(aislesData, filterParsedToSelected(parsedPreview, selectedItems)), 'Merged into Store Aisles');
+		persistUpload(mergeAisles(aislesData, withUploadCategory(filterParsedToSelected(parsedPreview, selectedItems))), 'Merged into Store Aisles');
 	}
 	function handleReplace() {
 		if (!requireGrocery()) return;
 		if (!requireUpload()) return;
 		if (selectedItems.size === 0) { toast = { type: 'error', text: 'No items selected to save. Select the aisles/items you want first.' }; return; }
-		persistAisles(filterParsedToSelected(parsedPreview, selectedItems), 'Replaced Store Aisles');
+		persistUpload(withUploadCategory(filterParsedToSelected(parsedPreview, selectedItems)), 'Replaced Store Aisles');
 	}
 	function handleSavePreview() {
 		// if (!requireGrocery()) return;
 		if (!requireUpload()) return;
-		persistAisles(parsedPreview, 'Preview saved successfully');
+		persistUpload(withUploadCategory(parsedPreview), 'Preview saved successfully');
 	}
 	function handleAppend() {
 		if (!requireGrocery()) return;
 		if (!requireUpload()) return;
 		const payload = selectedItems.size > 0 ? filterParsedToSelected(parsedPreview, selectedItems) : parsedPreview;
 		if (!payload || !payload.aisles || payload.aisles.length === 0) { toast = { type: 'error', text: 'No items to append.' }; return; }
-		persistAisles(appendAisles(aislesData, payload), 'Appended to Store Aisles');
+		persistUpload(appendAisles(aislesData, withUploadCategory(payload)), 'Appended to Store Aisles');
 	}
 
 	let deletingAll = $state(false);
@@ -1304,7 +1314,7 @@ const allAislesCategorized = $derived<boolean>(
 	</header>
 
 	{#if toast}
-		<div class="fixed bottom-4 right-4 z-50 px-4 py-3 rounded-xl shadow-lg text-sm font-medium {toast.type === 'error' ? 'bg-red-600 text-white' : 'bg-green-600 text-white'}">{toast.text}</div>
+		<div class="fixed top-4 left-1/2 -translate-x-1/2 z-[100] px-4 py-3 rounded-xl shadow-lg text-sm font-medium {toast.type === 'error' ? 'bg-red-600 text-white' : 'bg-green-600 text-white'}">{toast.text}</div>
 	{/if}
 
 	<main class="max-w-6xl mx-auto px-6 py-6">
@@ -1318,10 +1328,6 @@ const allAislesCategorized = $derived<boolean>(
 					<label class="block text-sm font-medium text-gray-700 mb-1">Category for this upload (from categories table-DB)</label>
 					<select
 						bind:value={uploadCategoryId}
-						onchange={() => {
-							if (!previewIsUpload || !parsedPreview?.aisles || !uploadCategoryId) return;
-							parsedPreview = { ...parsedPreview, aisles: parsedPreview.aisles.map((a: any) => (a.category_id ? a : { ...a, category_id: uploadCategoryId })) };
-						}}
 						class={`w-full sm:w-64 border rounded-lg px-3 py-2 text-sm ${uploadCategoryId ? 'border-gray-300' : 'border-red-400 bg-red-50'}`}
 					>
 						<option value="" disabled>Select category…</option>
