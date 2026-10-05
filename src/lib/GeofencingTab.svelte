@@ -429,10 +429,11 @@
 	});
 </script>
 
+
+
 <div class="flex flex-col gap-4 lg:flex-row">
 	<!-- Sidebar -->
-
-	<aside class="flex w-full flex-col gap-4 lg:w-72 lg:shrink-0">
+	<aside class="flex w-full flex-col gap-4 lg:w-60 lg:shrink-0">
 		<div class="rounded-xl border border-gray-200 bg-white p-4">
 			<h2 class="text-lg font-bold text-gray-900">Delivery zones</h2>
 			<p class="mt-1 text-sm text-gray-500">
