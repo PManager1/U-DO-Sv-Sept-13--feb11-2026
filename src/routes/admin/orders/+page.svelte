@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import API_BASE from '$lib/api';
+	import tokenManager from '$lib/tokenManager';
 
 	let orders = $state<any[]>([]);
 	let loading = $state(true);
@@ -98,7 +99,7 @@
 		try {
 			loading = true;
 			error = null;
-			const res = await fetch(API_BASE + 'admin/orders');
+			const res = await fetch(API_BASE + 'admin/orders', { headers: tokenManager.getHeaders() });
 			if (!res.ok) throw new Error(`Server returned ${res.status}`);
 			const data = await res.json();
 			orders = Array.isArray(data.data) ? data.data.map(normalizeOrder) : [];
@@ -118,7 +119,7 @@
 		if (!id) return;
 		if (!confirm(`Delete order ${id}? This will remove it permanently.`)) return;
 		try {
-			const res = await fetch(API_BASE + `admin/orders/${id}`, { method: 'DELETE' });
+			const res = await fetch(API_BASE + `admin/orders/${id}`, { method: 'DELETE', headers: tokenManager.getHeaders() });
 			if (!res.ok) throw new Error(await res.text());
 			orders = orders.filter((o) => (o.id || o._id) !== id);
 		} catch (err) {
@@ -129,14 +130,78 @@
 	function statusColor(status: string) {
 		const colors: Record<string, string> = {
 			pending: 'bg-yellow-100 text-yellow-800',
+			placed: 'bg-blue-100 text-blue-800',
 			confirmed: 'bg-blue-100 text-blue-800',
-			preparing: 'bg-orange-100 text-orange-800',
-			ready: 'bg-green-100 text-green-800',
-			out_for_delivery: 'bg-cyan-100 text-cyan-800',
-			delivered: 'bg-green-100 text-green-800',
+			accepted: 'bg-blue-100 text-blue-800',
+			picking: 'bg-orange-100 text-orange-800',
+			picked: 'bg-amber-100 text-amber-800',
+			in_transit: 'bg-cyan-100 text-cyan-800',
+			completed: 'bg-green-100 text-green-800',
 			cancelled: 'bg-red-100 text-red-800'
 		};
 		return colors[status] || 'bg-gray-100 text-gray-800';
+	}
+
+	// Order states, same as udo3 Udo.Orders.Status. The server decides; this only greys out moves it would refuse.
+	const STATUSES: { value: string; label: string; rank: number | null }[] = [
+		{ value: 'pending', label: 'Pending', rank: 0 },
+		{ value: 'placed', label: 'Placed', rank: 1 },
+		{ value: 'confirmed', label: 'Confirmed', rank: 1 },
+		{ value: 'accepted', label: 'Accepted', rank: 1 },
+		{ value: 'picking', label: 'Shopping (picking)', rank: 2 },
+		{ value: 'picked', label: 'Picked', rank: 3 },
+		{ value: 'in_transit', label: 'On the way', rank: 4 },
+		{ value: 'completed', label: 'Delivered (completed)', rank: 5 },
+		{ value: 'cancelled', label: 'Cancelled', rank: null }
+	];
+	const rankOf = (s: string) => STATUSES.find((x) => x.value === s)?.rank ?? null;
+
+	function canMove(from: string, to: string) {
+		from = (from || 'pending').toLowerCase();
+		if (from === to) return true;
+		if (from === 'cancelled' || from === 'completed') return false;
+		if (to === 'cancelled') return true;
+		if (from === 'picking' && to === 'confirmed') return true;
+		const a = rankOf(from), b = rankOf(to);
+		return a != null && b != null && b > a;
+	}
+
+	let notifyCustomer = $state(true);
+	let savingStatusId = $state<string | null>(null);
+	let pendingChange = $state<{ order: any; to: string; reason: string } | null>(null);
+
+	function onStatusSelect(order: any, select: HTMLSelectElement) {
+		const to = select.value;
+		select.value = order.status; // stays on the saved status until the server agrees
+		if (to === order.status) return;
+		if (to === 'cancelled' || to === 'completed') pendingChange = { order, to, reason: '' };
+		else saveStatus(order, to);
+	}
+
+	async function saveStatus(order: any, to: string, reason = '') {
+		const oid = order.id || order._id;
+		savingStatusId = oid;
+		try {
+			const res = await fetch(API_BASE + `admin/orders/${oid}/status`, {
+				method: 'PATCH',
+				headers: tokenManager.getHeaders(),
+				body: JSON.stringify({ status: to, notify: notifyCustomer, reason: reason || undefined })
+			});
+			const body = await res.json().catch(() => ({}));
+			if (!res.ok) throw new Error(body.error || body.message || `Server returned ${res.status}`);
+			orders = orders.map((o) => ((o.id || o._id) === oid ? { ...o, status: body.data.status, paymentStatus: body.data.payment_status, payment_status: body.data.payment_status } : o));
+		} catch (err) {
+			alert('Failed to change status: ' + (err as Error).message);
+		} finally {
+			savingStatusId = null;
+		}
+	}
+
+	async function confirmPending() {
+		if (!pendingChange) return;
+		const { order, to, reason } = pendingChange;
+		pendingChange = null;
+		await saveStatus(order, to, reason.trim());
 	}
 
 	function typeIcon(type: string) {
@@ -253,7 +318,20 @@
 								<button onclick={(e) => { e.stopPropagation(); deleteOrder(oid); }} aria-label="Delete order" title="Delete order" class="w-7 h-7 rounded-full flex items-center justify-center text-red-500 hover:bg-red-50 hover:text-red-600 transition">
 									<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
 								</button>
-								<span class={`text-[10px] font-bold px-2.5 py-1 rounded-full ${statusColor(order.status)}`}>{order.status?.replace(/_/g, ' ').toUpperCase() || 'UNKNOWN'}</span>
+								<select
+									aria-label="Order status"
+									title="Change order status"
+									value={order.status}
+									disabled={savingStatusId === oid}
+									onclick={(e) => e.stopPropagation()}
+									onchange={(e) => onStatusSelect(order, e.currentTarget as HTMLSelectElement)}
+									class={`text-[10px] font-bold uppercase pl-2.5 pr-6 py-1 rounded-full border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-orange-400 disabled:opacity-50 disabled:cursor-wait ${statusColor(order.status)}`}
+								>
+									{#if !STATUSES.some((s) => s.value === order.status)}<option value={order.status}>{order.status || 'unknown'}</option>{/if}
+									{#each STATUSES as s}
+										<option value={s.value} disabled={!canMove(order.status, s.value)}>{s.label}</option>
+									{/each}
+								</select>
 								<svg class={`w-4 h-4 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
 							</div>
 						</div>
@@ -376,6 +454,33 @@
 			</div>
 		{/if}
 	</main>
+
+	{#if pendingChange}
+		<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" role="presentation" onclick={() => (pendingChange = null)} onkeydown={(e) => e.key === 'Escape' && (pendingChange = null)}>
+			<div class="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl" role="dialog" aria-modal="true" aria-labelledby="status-confirm-title" tabindex="-1" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
+				<h2 id="status-confirm-title" class="text-lg font-bold text-gray-900">
+					{pendingChange.to === 'cancelled' ? 'Cancel this order?' : 'Mark this order delivered?'}
+				</h2>
+				<p class="mt-2 text-sm text-gray-600">
+					{pendingChange.order.brandName || 'Order'} #{pendingChange.order.orderNumber || pendingChange.order.id}:
+					{pendingChange.order.status?.replace(/_/g, ' ')} → {pendingChange.to === 'cancelled' ? 'cancelled' : 'completed'}.
+					{pendingChange.to === 'cancelled' ? 'The card hold is released.' : 'The card is charged for the order total.'}
+					{notifyCustomer ? 'The customer is notified.' : 'The customer is not notified.'}
+				</p>
+				{#if pendingChange.to === 'cancelled'}
+					<input type="text" bind:value={pendingChange.reason} maxlength="500" placeholder="Reason (optional)"
+						class="mt-3 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+				{/if}
+				<div class="mt-5 flex gap-2">
+					<button type="button" onclick={() => (pendingChange = null)} class="flex-1 rounded-xl px-4 py-2.5 text-sm font-semibold text-gray-600 hover:bg-gray-100">Keep as is</button>
+					<button type="button" onclick={confirmPending}
+						class={`flex-1 rounded-xl px-4 py-2.5 text-sm font-bold text-white ${pendingChange.to === 'cancelled' ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}>
+						{pendingChange.to === 'cancelled' ? 'Cancel order' : 'Mark delivered'}
+					</button>
+				</div>
+			</div>
+		</div>
+	{/if}
 
 	<footer class="text-center text-xs text-gray-400 py-6 border-t border-gray-100 max-w-6xl mx-auto">UDO Admin · Brand Orders</footer>
 </div>

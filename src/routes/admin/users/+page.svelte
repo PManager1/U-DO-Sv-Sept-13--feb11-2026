@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import API_BASE from '$lib/api';
+	import tokenManager from '$lib/tokenManager';
 
 	let users = $state<any[]>([]);
 	let loading = $state(true);
@@ -45,7 +46,7 @@
 		try {
 			const res = await fetch(API_BASE + `admin/users/${userId}/role`, {
 				method: 'PATCH',
-				headers: { 'Content-Type': 'application/json' },
+				headers: tokenManager.getHeaders(),
 				body: JSON.stringify({ roles })
 			});
 			if (!res.ok) {
@@ -82,7 +83,8 @@
 		deletingUserId = userId;
 		try {
 			const res = await fetch(API_BASE + `admin/users/${userId}`, {
-				method: 'DELETE'
+				method: 'DELETE',
+				headers: tokenManager.getHeaders()
 			});
 			if (!res.ok) {
 				const text = await res.text();
@@ -111,7 +113,7 @@
 		try {
 			const res = await fetch(API_BASE + `admin/users/${userId}/status`, {
 				method: 'PATCH',
-				headers: { 'Content-Type': 'application/json' },
+				headers: tokenManager.getHeaders(),
 				body: JSON.stringify({ status: newStatus })
 			});
 			if (!res.ok) {
@@ -176,7 +178,7 @@
 		userDetails = {};
 		userAddresses = {};
 		try {
-			const res = await fetch(API_BASE + 'admin/users');
+			const res = await fetch(API_BASE + 'admin/users', { headers: tokenManager.getHeaders() });
 			if (!res.ok) throw new Error(`Server returned ${res.status}`);
 			const data = await res.json();
 			const raw = Array.isArray(data.data) ? data.data : [];
@@ -226,7 +228,7 @@
 
 		loadingDetails = userId;
 		try {
-			const res = await fetch(API_BASE + `admin/users/${userId}`);
+			const res = await fetch(API_BASE + `admin/users/${userId}`, { headers: tokenManager.getHeaders() });
 			if (!res.ok) throw new Error(`Server returned ${res.status}`);
 			const data = await res.json();
 			userDetails[userId] = normalizeUser(data.data);
@@ -242,7 +244,7 @@
 
 		loadingAddresses = userId;
 		try {
-			const res = await fetch(API_BASE + `admin/users/${userId}/addresses`);
+			const res = await fetch(API_BASE + `admin/users/${userId}/addresses`, { headers: tokenManager.getHeaders() });
 			if (!res.ok) throw new Error('Failed to load addresses');
 			const data = await res.json();
 			userAddresses[userId] = (data.data || []).map(normalizeAddress);

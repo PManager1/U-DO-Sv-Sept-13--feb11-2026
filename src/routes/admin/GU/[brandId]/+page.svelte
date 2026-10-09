@@ -824,6 +824,38 @@ function handleSaveRow(ai: number, ii: number) {
 		await patchItem(ai, ii, updatedItem, 'Store image removed & saved', `${ai}:${ii}`);
 	}
 
+	// The primary image is the one every app/web view shows; udo3 keeps raw_image_url equal to it.
+	function isPrimaryImage(item: any, img: any) {
+		return !!img?.url && img.url === item?.raw_image_url;
+	}
+
+	let settingPrimaryUrl = $state<string | null>(null);
+
+	async function setPrimaryImage(ai: number, ii: number, url: string) {
+		const item = parsedPreview?.aisles?.[ai]?.items?.[ii];
+		if (!item?.id) {
+			toast = { type: 'error', text: 'Save this item first, then pick its primary image.' };
+			return;
+		}
+		settingPrimaryUrl = url;
+		try {
+			const res = await fetch(`${API_BASE}admin/brands/${brandId}/products/${item.id}/primary-image`, {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json', ...headers },
+				body: JSON.stringify({ url })
+			});
+			const data = await res.json().catch(() => ({}));
+			if (!res.ok) throw new Error(data.error || `Server returned ${res.status}`);
+			updatePreviewItem(ai, ii, 'images', data.item?.images ?? item.images);
+			updatePreviewItem(ai, ii, 'raw_image_url', data.item?.raw_image_url ?? url);
+			toast = { type: 'success', text: 'Primary image updated' };
+		} catch (err: any) {
+			toast = { type: 'error', text: 'Could not set primary image: ' + err.message };
+		} finally {
+			settingPrimaryUrl = null;
+		}
+	}
+
 	function updatePreviewItem(ai: number, ii: number, field: string, value: any) {
 		parsedPreview = {
 			...parsedPreview,
@@ -1485,7 +1517,7 @@ const allAislesCategorized = $derived<boolean>(
 												{#if (item.images || []).length > 0}
 													<div class="flex gap-1 flex-wrap max-w-[96px]">
 														{#each (item.images || []) as img}
-															<img src={img.url} alt="" class="w-5 h-5 rounded object-cover border border-gray-200" referrerpolicy="no-referrer" />
+															<img src={img.url} alt="" class={`w-5 h-5 rounded object-cover border ${isPrimaryImage(item, img) ? 'border-violet-600 ring-1 ring-violet-600' : 'border-gray-200'} ${img.hidden ? 'opacity-30' : ''}`} title={img.hidden ? 'Hidden' : ''} referrerpolicy="no-referrer" />
 														{/each}
 													</div>
 												{/if}
@@ -1512,10 +1544,22 @@ const allAislesCategorized = $derived<boolean>(
 													<div class="mt-2 space-y-1.5">
 														{#each item.images as img, imgIdx}
 															{@const sizeLbl = img.size ?? (imgIdx === 0 ? '1000' : imgIdx === 1 ? '400' : imgIdx === 2 ? '150' : 'store')}
-															<div class="flex items-center gap-2 border border-gray-200 rounded-lg px-2 py-1.5">
-																<img src={img.url} alt="" class="w-9 h-9 rounded object-cover flex-shrink-0 border border-gray-100" referrerpolicy="no-referrer" />
-<span class={`text-[9px] font-bold px-1.5 py-0.5 rounded ${sizeLbl === 'store' ? 'bg-blue-100 text-blue-700' : sizeLbl === '400' ? 'bg-violet-100 text-violet-700' : 'bg-emerald-100 text-emerald-700'}`}>{sizeLbl === 'store' ? 'Store' : sizeLbl + 'px'}</span>
+															<div class={`flex items-center gap-2 border border-gray-200 rounded-lg px-2 py-1.5 ${img.hidden ? 'bg-gray-50' : ''}`}>
+																<span class="text-[10px] font-bold text-gray-500 w-5 flex-shrink-0" title="Position in the gallery">#{imgIdx + 1}</span>
+																<img src={img.url} alt="" class={`w-9 h-9 rounded object-cover flex-shrink-0 border border-gray-100 ${img.hidden ? 'opacity-35 grayscale' : ''}`} referrerpolicy="no-referrer" />
+<span class={`text-[9px] font-bold px-1.5 py-0.5 rounded ${sizeLbl === 'store' ? 'bg-blue-100 text-blue-700' : sizeLbl === '400' ? 'bg-violet-100 text-violet-700' : 'bg-emerald-100 text-emerald-700'}`}>{sizeLbl === 'store' ? 'Store' : sizeLbl === 'original' ? 'Original' : sizeLbl + 'px'}</span>
+																{#if img.source === 'self_uploaded'}
+																	<span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-sky-100 text-sky-700 flex-shrink-0" title="Taken in the U-DO app">📱 Self-uploaded</span>
+																{/if}
+																{#if img.hidden}
+																	<span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-gray-200 text-gray-600 flex-shrink-0" title="Not shown to customers">Hidden</span>
+																{/if}
 																<a href={img.url} target="_blank" rel="noopener noreferrer" class="flex-1 min-w-0 text-[10px] text-blue-600 hover:underline truncate">{img.url}</a>
+																{#if isPrimaryImage(item, img)}
+																	<span class="text-[10px] font-bold text-violet-700 flex-shrink-0" title="Thumbnail customers see">★ #1</span>
+																{:else}
+																	<button onclick={() => setPrimaryImage(ai, ii, img.url)} disabled={settingPrimaryUrl !== null} class="text-[10px] font-medium text-violet-600 hover:text-violet-800 flex-shrink-0 disabled:opacity-50">{settingPrimaryUrl === img.url ? '...' : 'Move to #1'}</button>
+																{/if}
 																<button onclick={() => upImageToGC(ai, ii, img.url)} disabled={!isGrocery || gCLoadingKey === `${ai}:${ii}`} class="text-[10px] font-medium text-sky-600 hover:text-sky-800 flex-shrink-0">{gCLoadingKey === `${ai}:${ii}` ? '...' : 'up GC'}</button>
 																<button onclick={() => openImageModal(ai, ii)} class="text-[10px] font-medium text-gray-600 hover:text-gray-800 flex-shrink-0">Edit</button>
 																<button onclick={() => deleteItemImage(ai, ii, img.url)} class="text-[10px] font-medium text-red-600 hover:text-red-800 flex-shrink-0">Delete</button>
@@ -1653,10 +1697,27 @@ const allAislesCategorized = $derived<boolean>(
 							<p class="text-sm font-medium text-gray-700 mb-2">Attached images ({modalItem.images.length})</p>
 							<div class="space-y-2 max-h-44 overflow-y-auto">
 								{#each modalItem.images as img, imgIdx}
-									<div class="flex items-center gap-3 border border-gray-200 rounded-xl p-2">
-										<img src={img.url} alt="" class="w-12 h-12 rounded object-cover flex-shrink-0 border border-gray-100" referrerpolicy="no-referrer" />
-										<a href={img.url} target="_blank" rel="noopener noreferrer" class="flex-1 min-w-0 text-xs text-blue-600 hover:underline truncate">{img.url}</a>
+									<div class={`flex items-center gap-3 border rounded-xl p-2 ${isPrimaryImage(modalItem, img) ? 'border-violet-400 bg-violet-50/40' : 'border-gray-200'}`}>
+										<span class="text-xs font-bold text-gray-500 w-6 flex-shrink-0">#{imgIdx + 1}</span>
+										<img src={img.url} alt="" class={`w-12 h-12 rounded object-cover flex-shrink-0 border border-gray-100 ${img.hidden ? 'opacity-35 grayscale' : ''}`} referrerpolicy="no-referrer" />
+										<div class="flex-1 min-w-0">
+											<a href={img.url} target="_blank" rel="noopener noreferrer" class="block text-xs text-blue-600 hover:underline truncate">{img.url}</a>
+											<div class="flex items-center gap-1 mt-0.5">
+												{#if isPrimaryImage(modalItem, img)}
+													<span class="text-[10px] font-bold text-violet-700">★ #1</span>
+												{/if}
+												{#if img.source === 'self_uploaded'}
+													<span class="text-[10px] font-bold px-1 rounded bg-sky-100 text-sky-700">📱 Self-uploaded</span>
+												{/if}
+												{#if img.hidden}
+													<span class="text-[10px] font-bold px-1 rounded bg-gray-200 text-gray-600">Hidden</span>
+												{/if}
+											</div>
+										</div>
 										<div class="flex items-center gap-1 flex-shrink-0">
+											{#if !isPrimaryImage(modalItem, img)}
+												<button type="button" onclick={() => setPrimaryImage(imageModal.ai, imageModal.ii, img.url)} disabled={settingPrimaryUrl !== null} class="text-xs text-violet-600 hover:text-violet-800 disabled:opacity-50" title="Move to #1 (also unhides it)">{settingPrimaryUrl === img.url ? '...' : 'Move to #1'}</button>
+											{/if}
 											<button type="button" onclick={() => { modalUrl = img.url; if (imageModal.mode === 'add') { modalUrl2 = ''; modalFile = null; modalFile2 = null; } }} class="text-xs text-gray-600 hover:text-gray-900" title="Edit">Edit</button>
 											<button type="button" onclick={() => removeAttachedImage(img.url)} class="text-xs text-red-600 hover:text-red-800" title="Delete">Delete</button>
 										</div>
