@@ -24,7 +24,7 @@
 	let currentImages = $state<string[]>([]);
 	let currentLabels = $state<string[]>([]);
 
-	const ALL_ROLES = ['user', 'customer', 'driver', 'provider', 'restaurant-owner', 'admin'];
+	const ALL_ROLES = ['user', 'customer', 'driver', 'provider', 'restaurant-owner', 'admin', 'tester'];
 
 	const roleColors: Record<string, string> = {
 		user: 'bg-blue-50 text-blue-700',
@@ -32,7 +32,8 @@
 		driver: 'bg-green-50 text-green-700',
 		provider: 'bg-purple-50 text-purple-700',
 		'restaurant-owner': 'bg-teal-50 text-teal-700',
-		admin: 'bg-orange-50 text-orange-700'
+		admin: 'bg-orange-50 text-orange-700',
+		tester: 'bg-amber-50 text-amber-700'
 	};
 
 	$effect(() => {

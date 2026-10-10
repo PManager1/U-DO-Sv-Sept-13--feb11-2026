@@ -48,5 +48,28 @@ export default {
 	},
 	validateTokenFormat(token: string): boolean {
 		return !!token && token.length >= 10;
+	},
+	// udo3 admin routes need "Authorization: Bearer <token>". Instead of adding it to every
+	// fetch() call, wrap window.fetch once: requests to apiBase get the saved token unless
+	// they already set one. Called from the root +layout.svelte.
+	installAuthFetch(apiBase: string) {
+		if (typeof window === 'undefined' || (window as any).__udoAuthFetch) return;
+		(window as any).__udoAuthFetch = true;
+		const original = window.fetch.bind(window);
+		const getToken = () => this.getToken();
+		let warned = false;
+		window.fetch = async (input: RequestInfo | URL, init: RequestInit = {}) => {
+			const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+			const token = getToken();
+			if (!url.startsWith(apiBase)) return original(input, init);
+			const headers = new Headers(init.headers ?? (input instanceof Request ? input.headers : undefined));
+			if (token && !headers.has('Authorization')) headers.set('Authorization', 'Bearer ' + token);
+			const res = await original(input, { ...init, headers });
+			if ((res.status === 401 || res.status === 403) && url.startsWith(apiBase + 'admin/') && !warned) {
+				warned = true;
+				alert('Please sign in as an admin to use this page.');
+			}
+			return res;
+		};
 	}
 };
